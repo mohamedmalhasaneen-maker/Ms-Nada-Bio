@@ -270,7 +270,17 @@
           </div>
           <p id="card-group-name" class="text-[11px] text-amber-300 font-medium">الجهاز • القسم</p>
         </div>
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-1.5">
+          <!-- زر القراءة الصوتية الفورية (TTS Speaker) -->
+          <button id="btn-speak-card" onclick="toggleCardSpeech()" title="إعادة تشغيل أو إيقاف القراءة الصوتية" class="px-2 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-all flex items-center gap-1 text-[11px] font-bold shadow-sm">
+            <svg id="icon-speaker-playing" class="w-3.5 h-3.5 text-amber-300 animate-pulse hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            </svg>
+            <svg id="icon-speaker-idle" class="w-3.5 h-3.5 text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            </svg>
+            <span id="speech-status-text">🔊 استماع</span>
+          </button>
           <span id="card-count-badge" class="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-mono font-bold text-[11px]">
             بيانات المنهج
           </span>
@@ -1701,6 +1711,9 @@
 
       itemInfoCard.classList.remove('hidden');
 
+      // 5. القراءة الصوتية التلقائية باللغة العربية للبطاقة
+      speakCardContent(item);
+
       // تحديث تمييز العنصر في الفهرس
       document.querySelectorAll('[id^="tree-item-"]').forEach(el => {
         el.classList.remove('bg-amber-500/20', 'border-r-2', 'border-amber-400');
@@ -1710,6 +1723,116 @@
         activeTreeEl.classList.add('bg-amber-500/20', 'border-r-2', 'border-amber-400');
         activeTreeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
+    }
+
+    // =========================================================================
+    // محرك القراءة الصوتية والنطق باللغة العربية (Text-To-Speech Engine)
+    // =========================================================================
+    let isSpeechEnabled = true;
+    let isSpeakingNow = false;
+
+    function cleanTextForSpeech(text) {
+      if (!text) return '';
+      return text
+        .replace(/[•\(\)\/\\_\-–—]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function updateSpeechUI(speaking) {
+      const iconPlaying = document.getElementById('icon-speaker-playing');
+      const iconIdle = document.getElementById('icon-speaker-idle');
+      const statusText = document.getElementById('speech-status-text');
+      const btn = document.getElementById('btn-speak-card');
+
+      if (iconPlaying && iconIdle && statusText) {
+        if (speaking) {
+          iconPlaying.classList.remove('hidden');
+          iconIdle.classList.add('hidden');
+          statusText.innerText = 'جارِ القراءة...';
+          if (btn) btn.classList.add('bg-amber-500/40', 'border-amber-400', 'text-amber-200');
+        } else {
+          iconPlaying.classList.add('hidden');
+          iconIdle.classList.remove('hidden');
+          statusText.innerText = '🔊 استماع';
+          if (btn) btn.classList.remove('bg-amber-500/40', 'border-amber-400', 'text-amber-200');
+        }
+      }
+    }
+
+    function stopSpeaking() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      isSpeakingNow = false;
+      updateSpeechUI(false);
+    }
+
+    function speakCardContent(item, force = false) {
+      if (!('speechSynthesis' in window)) return;
+      if (!isSpeechEnabled && !force) return;
+
+      stopSpeaking();
+      if (!item) return;
+
+      const title = item.name || '';
+      const func = item.functionDesc || '';
+      const exam = item.examNote || '';
+
+      let textToRead = `${title}. `;
+      if (func) {
+        textToRead += `الوظيفة: ${func}. `;
+      }
+      if (exam) {
+        textToRead += `ملاحظة امتحانية: ${exam}.`;
+      }
+
+      const cleanText = cleanTextForSpeech(textToRead);
+      if (!cleanText) return;
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'ar-SA';
+      utterance.rate = 0.95;
+      utterance.pitch = 1.0;
+
+      // اختيار صوت عربي إذا توفر في المتصفح
+      const voices = window.speechSynthesis.getVoices();
+      const arabicVoice = voices.find(v => v.lang && (v.lang.startsWith('ar') || v.lang.toLowerCase().includes('arabic')));
+      if (arabicVoice) {
+        utterance.voice = arabicVoice;
+      }
+
+      utterance.onstart = () => {
+        isSpeakingNow = true;
+        updateSpeechUI(true);
+      };
+
+      utterance.onend = () => {
+        isSpeakingNow = false;
+        updateSpeechUI(false);
+      };
+
+      utterance.onerror = () => {
+        isSpeakingNow = false;
+        updateSpeechUI(false);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function toggleCardSpeech() {
+      if (isSpeakingNow) {
+        stopSpeaking();
+      } else if (currentSelectedItem) {
+        speakCardContent(currentSelectedItem, true);
+      }
+    }
+
+    // تهيئة أصوات المتصفح مسبقاً
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
     }
 
     function resetAllMaterials() {
@@ -1723,6 +1846,7 @@
     }
 
     function resetSceneAndIsolation() {
+      stopSpeaking();
       resetAllMaterials();
       currentSelectedItem = null;
       itemInfoCard.classList.add('hidden');
@@ -1751,6 +1875,7 @@
     }
 
     function closeInfoCard() {
+      stopSpeaking();
       itemInfoCard.classList.add('hidden');
       resetAllMaterials();
       currentSelectedItem = null;
