@@ -1,0 +1,8 @@
+{
+  "name": "Remix BioAnatomy 3D - أطلس الأحياء التفاعلي",
+  "description": "منصة تعليمية تفاعلية متكاملة لمادة الأحياء واستكشاف تشريح جسم الإنسان ثلاثي الأبعاد: الهيكل العظمي، الجهاز العضلي، والجهاز العصبي بتقنية Three.js.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
