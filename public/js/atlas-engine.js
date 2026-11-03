@@ -349,6 +349,7 @@
 
   let activeSystem = "skeletal";
   let currentSelectedItem = null;
+  let currentSelectedMeta = { sectionName: "", systemName: "" };
   let currentHighlightedMeshes = [];
   let isAutoRotating = false;
   let isMainWireframe = false;
@@ -906,7 +907,243 @@
   }
   window.toggleExplodedBar = toggleExplodedBar;
 
-  // --- 8. الفهرس التشريحي والبحث والتصفية المتقدمة ---
+  // --- 8. نظام حفظ العناصر المفضلة (Bookmarks) والفهرس التشريحي المتقدم ---
+  const BOOKMARKS_STORAGE_KEY = "ms_nada_atlas_bookmarks_v1";
+  let bookmarksMemoryFallback = [];
+  let confirmClearBookmarksPending = false;
+  let confirmClearTimer = null;
+
+  function loadBookmarksFromStorage() {
+    try {
+      const raw = window.localStorage.getItem(BOOKMARKS_STORAGE_KEY);
+      if (!raw) return bookmarksMemoryFallback.slice();
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        bookmarksMemoryFallback = parsed.filter((entry) => entry && entry.id && entry.name);
+        return bookmarksMemoryFallback.slice();
+      }
+    } catch (e) {
+      // المتابعة بالنسخة المحفوظة في الذاكرة عند تقييد التخزين المحلي داخل الإطارات
+    }
+    return bookmarksMemoryFallback.slice();
+  }
+
+  let bookmarksList = loadBookmarksFromStorage();
+
+  function saveBookmarksToStorage() {
+    bookmarksMemoryFallback = bookmarksList.slice();
+    try {
+      window.localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(bookmarksList));
+    } catch (e) {
+      // الاعتماد على النسخة الذاكرية خلال الجلسة عند تقييد التخزين
+    }
+  }
+
+  function findCurriculumEntryById(itemId) {
+    if (!itemId) return null;
+    const sysKeys = ["skeletal", "muscular", "nervous"];
+    for (const sk of sysKeys) {
+      const sys = ACADEMIC_CURRICULUM[sk];
+      if (!sys || !Array.isArray(sys.sections)) continue;
+      for (const sec of sys.sections) {
+        if (!Array.isArray(sec.items)) continue;
+        for (const it of sec.items) {
+          if (it.id === itemId) {
+            return {
+              item: it,
+              sectionName: sec.name,
+              systemName: sys.name,
+              sysAccent: sys.accent || "#38bdf8"
+            };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  function isItemBookmarked(itemId) {
+    if (!itemId) return false;
+    return bookmarksList.some((entry) => entry.id === itemId);
+  }
+
+  function serializeBookmarkEntry(item, meta) {
+    const sysKey = item.system || (activeSystem === "integrated" ? "skeletal" : activeSystem);
+    const exactMeshNames =
+      Array.isArray(item.exactNames) && item.exactNames.length > 0
+        ? item.exactNames.slice()
+        : item.isDynamicMesh && Array.isArray(item.exactMeshes)
+        ? item.exactMeshes.map((m) => m && m.name).filter(Boolean)
+        : [];
+
+    return {
+      id: item.id,
+      name: item.name,
+      count: item.count || 1,
+      system: sysKey,
+      keys: Array.isArray(item.keys) ? item.keys.slice() : [],
+      exactNames: exactMeshNames,
+      boneId: item.boneId || null,
+      isHandPhalanx: Boolean(item.isHandPhalanx),
+      isFootPhalanx: Boolean(item.isFootPhalanx),
+      isDynamicMesh: Boolean(item.isDynamicMesh),
+      functionDesc: item.functionDesc || "",
+      examNote: item.examNote || "",
+      sectionName: (meta && meta.sectionName) || "القسم المنهجي",
+      systemName: (meta && meta.systemName) || SYSTEM_LABELS_AR[sysKey] || "الأطلس التشريحي",
+      savedAt: Date.now()
+    };
+  }
+
+  function resolveBookmarkEntry(savedEntry) {
+    const found = findCurriculumEntryById(savedEntry.id);
+    if (found) {
+      return {
+        item: found.item,
+        sectionName: found.sectionName,
+        systemName: found.systemName,
+        sysAccent: found.sysAccent,
+        savedAt: savedEntry.savedAt || 0
+      };
+    }
+    const sysKey = savedEntry.system || "skeletal";
+    const sysObj = ACADEMIC_CURRICULUM[sysKey];
+    return {
+      item: {
+        id: savedEntry.id,
+        name: savedEntry.name,
+        count: savedEntry.count || 1,
+        system: sysKey,
+        keys: Array.isArray(savedEntry.keys) ? savedEntry.keys : [],
+        exactNames: Array.isArray(savedEntry.exactNames) ? savedEntry.exactNames : [],
+        boneId: savedEntry.boneId || null,
+        isHandPhalanx: Boolean(savedEntry.isHandPhalanx),
+        isFootPhalanx: Boolean(savedEntry.isFootPhalanx),
+        isDynamicMesh: Boolean(savedEntry.isDynamicMesh),
+        functionDesc: savedEntry.functionDesc || "",
+        examNote: savedEntry.examNote || ""
+      },
+      sectionName: savedEntry.sectionName || "تحديد تشريحي مباشر",
+      systemName: savedEntry.systemName || (sysObj && sysObj.name) || SYSTEM_LABELS_AR[sysKey] || "الأطلس التشريحي",
+      sysAccent: (sysObj && sysObj.accent) || "#38bdf8",
+      savedAt: savedEntry.savedAt || 0
+    };
+  }
+
+  function createHeartSvgMarkup(filled, sizeCls) {
+    return `<svg class="${sizeCls || "w-3.5 h-3.5"} transition-transform duration-200 pointer-events-none" fill="${
+      filled ? "currentColor" : "none"
+    }" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>`;
+  }
+
+  function updateFavoritesBadgesUI() {
+    const count = bookmarksList.length;
+    const countEl = document.getElementById("sidebar-favorites-count");
+    const tabIcon = document.getElementById("sidebar-fav-tab-icon");
+    if (countEl) {
+      countEl.innerText = `${count} عنصر`;
+    }
+    if (tabIcon) {
+      const shouldFill = count > 0 || sidebarSystemFilter === "favorites";
+      tabIcon.setAttribute("fill", shouldFill ? "currentColor" : "none");
+    }
+  }
+
+  function updateCardBookmarkButtonUI(animatePop) {
+    const btn = document.getElementById("btn-card-bookmark");
+    const icon = document.getElementById("card-bookmark-icon");
+    if (!btn || !icon) return;
+
+    const bookmarked = Boolean(currentSelectedItem && isItemBookmarked(currentSelectedItem.id));
+    btn.classList.toggle("is-bookmarked", bookmarked);
+    btn.setAttribute("aria-pressed", bookmarked ? "true" : "false");
+    btn.setAttribute("data-tip", bookmarked ? "إزالة من المفضلة" : "حفظ في المفضلة");
+    btn.setAttribute("aria-label", bookmarked ? "إزالة العنصر التشريحي من المفضلة" : "حفظ العنصر التشريحي في المفضلة");
+    icon.setAttribute("fill", bookmarked ? "currentColor" : "none");
+
+    if (animatePop && typeof gsap !== "undefined") {
+      gsap.fromTo(icon, { scale: 0.65 }, { scale: 1, duration: 0.34, ease: "back.out(2.4)" });
+    }
+  }
+
+  function toggleItemBookmarkByData(item, meta, animateCardBtn) {
+    if (!item || !item.id) return;
+    confirmClearBookmarksPending = false;
+
+    const existingIdx = bookmarksList.findIndex((entry) => entry.id === item.id);
+    let added = false;
+
+    if (existingIdx >= 0) {
+      bookmarksList.splice(existingIdx, 1);
+    } else {
+      bookmarksList.unshift(serializeBookmarkEntry(item, meta));
+      added = true;
+    }
+
+    saveBookmarksToStorage();
+    updateFavoritesBadgesUI();
+    updateCardBookmarkButtonUI(Boolean(animateCardBtn));
+    renderCurriculumSidebar(getSearchInputValue());
+
+    setInteractionStatus(
+      added ? `تم حفظ «${item.name}» في قائمة المفضلة` : `تمت إزالة «${item.name}» من المفضلة`,
+      added ? "active" : "ready"
+    );
+  }
+
+  function toggleCurrentItemBookmark() {
+    if (!currentSelectedItem) return;
+    toggleItemBookmarkByData(currentSelectedItem, currentSelectedMeta, true);
+  }
+  window.toggleCurrentItemBookmark = toggleCurrentItemBookmark;
+
+  function removeBookmarkById(itemId) {
+    const target = bookmarksList.find((entry) => entry.id === itemId);
+    if (!target) return;
+    bookmarksList = bookmarksList.filter((entry) => entry.id !== itemId);
+    saveBookmarksToStorage();
+    updateFavoritesBadgesUI();
+    updateCardBookmarkButtonUI(false);
+    renderCurriculumSidebar(getSearchInputValue());
+    setInteractionStatus(`تمت إزالة «${target.name}» من المفضلة`, "ready");
+  }
+  window.removeBookmarkById = removeBookmarkById;
+
+  function toggleFavoritesSidebarView() {
+    if (sidebarSystemFilter === "favorites") {
+      setSidebarSystemFilter("active");
+    } else {
+      setSidebarSystemFilter("favorites");
+    }
+  }
+  window.toggleFavoritesSidebarView = toggleFavoritesSidebarView;
+
+  function clearAllBookmarks() {
+    if (!bookmarksList.length) return;
+    if (!confirmClearBookmarksPending) {
+      confirmClearBookmarksPending = true;
+      clearTimeout(confirmClearTimer);
+      confirmClearTimer = setTimeout(() => {
+        confirmClearBookmarksPending = false;
+        if (sidebarSystemFilter === "favorites") {
+          renderCurriculumSidebar(getSearchInputValue());
+        }
+      }, 3200);
+      renderCurriculumSidebar(getSearchInputValue());
+      return;
+    }
+    confirmClearBookmarksPending = false;
+    clearTimeout(confirmClearTimer);
+    bookmarksList = [];
+    currentSubFilter = "all";
+    saveBookmarksToStorage();
+    updateFavoritesBadgesUI();
+    updateCardBookmarkButtonUI(false);
+    renderCurriculumSidebar(getSearchInputValue());
+    setInteractionStatus("تم إفراغ قائمة العناصر المفضلة", "ready");
+  }
+  window.clearAllBookmarks = clearAllBookmarks;
+
   let flatRenderedItems = [];
 
   function getSearchInputValue() {
@@ -917,9 +1154,11 @@
   function setSidebarSystemFilter(filterVal) {
     sidebarSystemFilter = filterVal;
     currentSubFilter = "all";
+    confirmClearBookmarksPending = false;
     document.querySelectorAll("[data-index-sys]").forEach((btn) => {
       btn.classList.toggle("is-active", btn.getAttribute("data-index-sys") === filterVal);
     });
+    updateFavoritesBadgesUI();
     renderCurriculumSidebar(getSearchInputValue());
   }
   window.setSidebarSystemFilter = setSidebarSystemFilter;
@@ -934,6 +1173,164 @@
   }
   window.clearCurriculumSearch = clearCurriculumSearch;
 
+  function renderFavoritesListInSidebar(q, treeContainer, subFilterContainer, sidebarTitle, sidebarDot, countLabel) {
+    if (sidebarTitle) sidebarTitle.innerText = "العناصر التشريحية المفضلة";
+    if (sidebarDot) sidebarDot.style.backgroundColor = "#fb7185";
+
+    const resolvedAll = bookmarksList.map((entry) => resolveBookmarkEntry(entry));
+
+    const sysCounts = {
+      all: resolvedAll.length,
+      skeletal: resolvedAll.filter((r) => r.item.system === "skeletal").length,
+      muscular: resolvedAll.filter((r) => r.item.system === "muscular").length,
+      nervous: resolvedAll.filter((r) => r.item.system === "nervous").length
+    };
+
+    if (subFilterContainer) {
+      if (resolvedAll.length === 0) {
+        subFilterContainer.innerHTML = "";
+      } else {
+        const subFilters = [
+          { key: "all", label: `الكل (${sysCounts.all})` },
+          { key: "skeletal", label: `العظمي (${sysCounts.skeletal})` },
+          { key: "muscular", label: `العضلي (${sysCounts.muscular})` },
+          { key: "nervous", label: `العصبي (${sysCounts.nervous})` }
+        ];
+        let chipsHtml = subFilters
+          .filter((sf) => sf.key === "all" || sysCounts[sf.key] > 0)
+          .map(
+            (sf) =>
+              `<button type="button" onclick="filterBySubGroup('${sf.key}')" class="chip-btn tabular-nums ${
+                currentSubFilter === sf.key ? "is-active" : ""
+              }">${sf.label}</button>`
+          )
+          .join("");
+
+        chipsHtml += `<button type="button" onclick="clearAllBookmarks()" class="chip-btn shrink-0 ${
+          confirmClearBookmarksPending
+            ? "!text-rose-100 !bg-rose-600/40 !border-rose-400"
+            : "!text-rose-300/90 !border-rose-500/35 hover:!bg-rose-500/20"
+        }">${confirmClearBookmarksPending ? "تأكيد مسح الكل؟" : "مسح الكل"}</button>`;
+
+        subFilterContainer.innerHTML = chipsHtml;
+      }
+    }
+
+    const filteredFavorites = resolvedAll.filter((entry) => {
+      if (currentSubFilter !== "all" && entry.item.system !== currentSubFilter) {
+        return false;
+      }
+      if (!q) return true;
+      const it = entry.item;
+      return (
+        it.name.toLowerCase().includes(q) ||
+        (entry.sectionName && entry.sectionName.toLowerCase().includes(q)) ||
+        (it.functionDesc && it.functionDesc.toLowerCase().includes(q)) ||
+        (it.examNote && it.examNote.toLowerCase().includes(q))
+      );
+    });
+
+    if (countLabel) {
+      countLabel.innerText = `${filteredFavorites.length} في المفضلة`;
+    }
+
+    if (resolvedAll.length === 0) {
+      treeContainer.innerHTML = `
+        <div class="p-6 rounded-2xl bg-slate-900/65 border border-slate-800/90 text-center space-y-3 my-2">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-rose-500/10 border border-rose-400/30 flex items-center justify-center text-rose-400">
+            ${createHeartSvgMarkup(false, "w-6 h-6")}
+          </div>
+          <div class="space-y-1">
+            <p class="text-xs font-extrabold text-slate-200">قائمة المفضلة فارغة حالياً</p>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              انقر على زر القلب داخل بطاقة المعلومات التشريحية أو بجوار أي عنصر لحفظ العظام والعضلات والأعصاب المهمة للمراجعة السريعة.
+            </p>
+          </div>
+          <button type="button" onclick="setSidebarSystemFilter('active')" class="px-3.5 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 text-xs font-bold border border-sky-400/40 transition-colors">
+            استكشاف الفهرس المنهجي
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    if (filteredFavorites.length === 0) {
+      treeContainer.innerHTML = `
+        <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-2">
+          <p class="text-xs font-bold text-slate-300">لا توجد عناصر مفضلة مطابقة للبحث أو التصفية</p>
+          <button type="button" onclick="filterBySubGroup('all'); clearCurriculumSearch();" class="mt-2 px-3 py-1.5 rounded-lg bg-rose-500/20 text-rose-200 text-xs font-bold border border-rose-400/40">
+            إظهار كل المفضلة
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    const listCard = document.createElement("div");
+    listCard.className = "rounded-2xl bg-slate-900/75 border border-slate-800/90 overflow-hidden divide-y divide-slate-800/60";
+
+    filteredFavorites.forEach((entry) => {
+      const { item, sectionName, systemName, sysAccent } = entry;
+      flatRenderedItems.push({ item, sectionName, systemName });
+
+      const isSelected = Boolean(currentSelectedItem && currentSelectedItem.id === item.id);
+      const unitLabel = item.system === "skeletal" ? "عظمة" : item.system === "muscular" ? "عضلة" : "عصب";
+      const sysShortLabel = SYSTEM_LABELS_AR[item.system] || systemName;
+
+      const row = document.createElement("div");
+      row.id = `tree-item-${item.id}`;
+      row.className = `index-item-card w-full flex items-center justify-between gap-1.5 transition-all ${
+        isSelected ? "is-selected" : ""
+      }`;
+
+      const selectBtn = document.createElement("button");
+      selectBtn.type = "button";
+      selectBtn.className = "flex-1 min-w-0 py-2.5 pr-3.5 pl-1 text-right flex items-center justify-between gap-2";
+      selectBtn.onclick = () => {
+        if (item.system && activeSystem !== "integrated" && item.system !== activeSystem) {
+          switchSystem(item.system);
+        }
+        selectItem(item, sectionName, systemName, true);
+        if (window.innerWidth < 768) {
+          toggleSidebar(false);
+        }
+      };
+
+      selectBtn.innerHTML = `
+        <div class="flex items-start gap-2.5 min-w-0">
+          <span class="w-2 h-2 rounded-full mt-1.5 shrink-0" style="background-color: ${
+            isSelected ? "#38bdf8" : sysAccent
+          }"></span>
+          <div class="min-w-0">
+            <div class="font-semibold text-xs text-slate-100 leading-snug truncate">${item.name}</div>
+            <div class="text-[10px] text-slate-400 truncate mt-0.5">${sysShortLabel} • ${sectionName.split("(")[0].trim()}</div>
+          </div>
+        </div>
+        <span class="font-mono text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-950/90 text-sky-300/90 border border-slate-800 shrink-0 tabular-nums">
+          ${item.count || 1} ${unitLabel}
+        </span>
+      `;
+
+      const removeFavBtn = document.createElement("button");
+      removeFavBtn.type = "button";
+      removeFavBtn.className =
+        "bookmark-heart-btn is-bookmarked w-7 h-7 ml-2.5 rounded-lg viewer-ctrl-btn flex items-center justify-center shrink-0";
+      removeFavBtn.setAttribute("data-tip", "إزالة من المفضلة");
+      removeFavBtn.setAttribute("aria-label", `إزالة ${item.name} من المفضلة`);
+      removeFavBtn.innerHTML = createHeartSvgMarkup(true, "w-3.5 h-3.5");
+      removeFavBtn.onclick = (e) => {
+        e.stopPropagation();
+        removeBookmarkById(item.id);
+      };
+
+      row.appendChild(selectBtn);
+      row.appendChild(removeFavBtn);
+      listCard.appendChild(row);
+    });
+
+    treeContainer.appendChild(listCard);
+  }
+
   function renderCurriculumSidebar(searchQuery) {
     const treeContainer = document.getElementById("tree-container");
     const subFilterContainer = document.getElementById("sub-filter-buttons");
@@ -943,11 +1340,18 @@
     const countLabel = document.getElementById("search-results-count");
     if (!treeContainer) return;
 
+    updateFavoritesBadgesUI();
     treeContainer.innerHTML = "";
     flatRenderedItems = [];
 
     const q = (searchQuery || "").trim().toLowerCase();
     if (clearBtn) clearBtn.classList.toggle("hidden", q.length === 0);
+
+    // وضع عرض قائمة العناصر المفضلة (Bookmarks)
+    if (sidebarSystemFilter === "favorites") {
+      renderFavoritesListInSidebar(q, treeContainer, subFilterContainer, sidebarTitle, sidebarDot, countLabel);
+      return;
+    }
 
     // تحديد الأجهزة المعروضة في الفهرس
     const effectiveFilter =
@@ -1019,7 +1423,7 @@
             <span class="font-bold text-xs text-slate-100 truncate">${sec.name}</span>
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
-            <span class="text-[10px] font-mono text-slate-400 bg-slate-800/90 px-1.5 py-0.5 rounded">${filteredItems.length}</span>
+            <span class="text-[10px] font-mono text-slate-400 bg-slate-800/90 px-1.5 py-0.5 rounded tabular-nums">${filteredItems.length}</span>
             <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
@@ -1033,13 +1437,18 @@
           totalMatches++;
           flatRenderedItems.push({ item, sectionName: sec.name, systemName: sys.name });
 
-          const isSelected = currentSelectedItem && currentSelectedItem.id === item.id;
-          const itemBtn = document.createElement("button");
-          itemBtn.type = "button";
-          itemBtn.id = `tree-item-${item.id}`;
-          itemBtn.className = `index-item-card w-full px-3.5 py-2.5 text-right flex items-center justify-between gap-2 transition-all ${
+          const isSelected = Boolean(currentSelectedItem && currentSelectedItem.id === item.id);
+          const bookmarked = isItemBookmarked(item.id);
+
+          const itemRow = document.createElement("div");
+          itemRow.id = `tree-item-${item.id}`;
+          itemRow.className = `index-item-card w-full flex items-center justify-between gap-1.5 transition-all ${
             isSelected ? "is-selected" : ""
           }`;
+
+          const itemBtn = document.createElement("button");
+          itemBtn.type = "button";
+          itemBtn.className = "flex-1 min-w-0 py-2.5 pr-3.5 pl-1 text-right flex items-center justify-between gap-2";
           itemBtn.onclick = () => {
             if (item.system && activeSystem !== "integrated" && item.system !== activeSystem) {
               switchSystem(item.system);
@@ -1070,7 +1479,24 @@
               ${item.count} ${unitLabel}
             </span>
           `;
-          itemsList.appendChild(itemBtn);
+
+          const favBtn = document.createElement("button");
+          favBtn.type = "button";
+          favBtn.className = `bookmark-heart-btn w-7 h-7 ml-2.5 rounded-lg viewer-ctrl-btn flex items-center justify-center shrink-0 ${
+            bookmarked ? "is-bookmarked" : ""
+          }`;
+          favBtn.setAttribute("data-tip", bookmarked ? "إزالة من المفضلة" : "حفظ في المفضلة");
+          favBtn.setAttribute("aria-label", bookmarked ? `إزالة ${item.name} من المفضلة` : `حفظ ${item.name} في المفضلة`);
+          favBtn.setAttribute("aria-pressed", bookmarked ? "true" : "false");
+          favBtn.innerHTML = createHeartSvgMarkup(bookmarked, "w-3.5 h-3.5");
+          favBtn.onclick = (e) => {
+            e.stopPropagation();
+            toggleItemBookmarkByData(item, { sectionName: sec.name, systemName: sys.name }, false);
+          };
+
+          itemRow.appendChild(itemBtn);
+          itemRow.appendChild(favBtn);
+          itemsList.appendChild(itemRow);
         });
 
         secHeader.onclick = () => {
@@ -1102,6 +1528,7 @@
 
   function filterBySubGroup(key) {
     currentSubFilter = key;
+    confirmClearBookmarksPending = false;
     renderCurriculumSidebar(getSearchInputValue());
   }
   window.filterBySubGroup = filterBySubGroup;
@@ -1185,7 +1612,20 @@
 
     const targetSys = item.system || (activeSystem === "integrated" ? "skeletal" : activeSystem);
     ensureSystemLoaded(targetSys, () => {
+      const resolvedSystemName =
+        systemName ||
+        (item.system === "muscular"
+          ? "الجهاز العضلي"
+          : item.system === "nervous"
+          ? "الجهاز العصبي"
+          : "الجهاز الهيكلي");
+      const resolvedSectionName = sectionName || "القسم المنهجي";
+
       currentSelectedItem = item;
+      currentSelectedMeta = {
+        sectionName: resolvedSectionName,
+        systemName: resolvedSystemName
+      };
       isIsolatedMode = false;
 
       const isolateBtnText = document.getElementById("isolate-btn-text");
@@ -1226,7 +1666,7 @@
         }
       }
 
-      // تحديث بطاقة المعلومات التشريحية
+      // تحديث بطاقة المعلومات التشريحية وحالة زر القلب (المفضلة)
       const cardTitleAr = document.getElementById("card-title-ar");
       const cardSysBadge = document.getElementById("card-system-pill");
       const cardGroupName = document.getElementById("card-group-name");
@@ -1237,16 +1677,8 @@
       const itemInfoCard = document.getElementById("item-info-card");
 
       if (cardTitleAr) cardTitleAr.innerText = item.name;
-      if (cardSysBadge) {
-        cardSysBadge.innerText =
-          systemName ||
-          (item.system === "muscular"
-            ? "الجهاز العضلي"
-            : item.system === "nervous"
-            ? "الجهاز العصبي"
-            : "الجهاز الهيكلي");
-      }
-      if (cardGroupName) cardGroupName.innerText = sectionName || "القسم المنهجي";
+      if (cardSysBadge) cardSysBadge.innerText = resolvedSystemName;
+      if (cardGroupName) cardGroupName.innerText = resolvedSectionName;
       if (cardCountBadge) {
         const unit = item.system === "muscular" ? "عضلة" : item.system === "nervous" ? "عصب" : "عظمة";
         cardCountBadge.innerText = `${item.count || 1} ${unit}`;
@@ -1261,6 +1693,8 @@
         const isSkeletalItem = (item.system || activeSystem) === "skeletal" || Boolean(item.boneId);
         extractBtn.classList.toggle("hidden", !isSkeletalItem);
       }
+
+      updateCardBookmarkButtonUI(false);
 
       if (itemInfoCard) {
         itemInfoCard.classList.remove("hidden");
@@ -1399,7 +1833,9 @@
     stopSpeaking();
     resetAllMaterials();
     currentSelectedItem = null;
+    currentSelectedMeta = { sectionName: "", systemName: "" };
     isIsolatedMode = false;
+    updateCardBookmarkButtonUI(false);
 
     const itemInfoCard = document.getElementById("item-info-card");
     if (itemInfoCard) itemInfoCard.classList.add("hidden");
@@ -1444,7 +1880,9 @@
     if (itemInfoCard) itemInfoCard.classList.add("hidden");
     resetAllMaterials();
     currentSelectedItem = null;
+    currentSelectedMeta = { sectionName: "", systemName: "" };
     isIsolatedMode = false;
+    updateCardBookmarkButtonUI(false);
     hideSelectionParticles();
     document.querySelectorAll(".index-item-card").forEach((el) => el.classList.remove("is-selected"));
     setInteractionStatus("وضع الاستكشاف الحر • اسحب للتدوير أو انقر على أي عنصر", "ready");
@@ -1637,18 +2075,24 @@
         selectItem(selectedObj, match.section.name, match.system.name, true);
       } else {
         const rawName = (hitMesh.name || "عنصر تشريحي منفرد").replace(/[_\.]/g, " ");
+        const meshSys = hitMesh.userData.system || (activeSystem === "integrated" ? "skeletal" : activeSystem);
+        const stableDynamicId = hitMesh.name
+          ? "mesh_" + meshSys + "_" + normalizeMeshLookupKey(hitMesh.name)
+          : "dynamic_" + hitMesh.uuid.slice(0, 8);
         selectItem(
           {
-            id: "dynamic_" + hitMesh.uuid.slice(0, 6),
+            id: stableDynamicId,
             name: rawName,
             count: 1,
-            system: hitMesh.userData.system || activeSystem,
+            system: meshSys,
+            isDynamicMesh: true,
+            exactNames: hitMesh.name ? [hitMesh.name] : [],
             exactMeshes: [hitMesh],
             functionDesc: "عنصر تشريحي دقيق محدد مباشرة من المجسم الواقعي ثلاثي الأبعاد.",
             examNote: "استخدم أدوات العزل أو الدوران لفحص علاقته التشريحية بالعناصر المجاورة."
           },
           "تحديد تشريحي مباشر",
-          SYSTEM_LABELS_AR[hitMesh.userData.system || activeSystem] || "الأطلس التشريحي",
+          SYSTEM_LABELS_AR[meshSys] || "الأطلس التشريحي",
           true
         );
       }

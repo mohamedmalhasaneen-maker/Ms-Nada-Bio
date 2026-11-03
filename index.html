@@ -148,6 +148,45 @@
       border-right: 3px solid #38bdf8;
     }
 
+    /* أزرار المفضلة (Bookmarks Heart & Sidebar Tab) */
+    .bookmark-heart-btn {
+      transition: all 0.2s ease;
+    }
+    .bookmark-heart-btn:hover {
+      color: #fda4af;
+      border-color: rgba(251, 113, 133, 0.5);
+      background: rgba(244, 63, 94, 0.14);
+    }
+    .bookmark-heart-btn.is-bookmarked {
+      color: #fb7185;
+      background: rgba(244, 63, 94, 0.2);
+      border-color: rgba(251, 113, 133, 0.6);
+      box-shadow: 0 0 12px rgba(244, 63, 94, 0.24);
+    }
+    .bookmark-heart-btn.is-bookmarked:hover {
+      color: #ffe4e6;
+      background: rgba(244, 63, 94, 0.3);
+      border-color: rgba(251, 113, 133, 0.8);
+    }
+
+    .sidebar-fav-tab {
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(51, 65, 85, 0.75);
+      transition: all 0.2s ease;
+    }
+    .sidebar-fav-tab:hover {
+      color: #fff1f2;
+      border-color: rgba(251, 113, 133, 0.45);
+      background: rgba(244, 63, 94, 0.12);
+    }
+    .sidebar-fav-tab.is-active {
+      color: #fff1f2;
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.26), rgba(14, 165, 233, 0.14));
+      border-color: rgba(251, 113, 133, 0.65);
+      box-shadow: 0 0 16px rgba(244, 63, 94, 0.22);
+    }
+
     #btn-speak-card.is-speaking {
       background: rgba(14, 165, 233, 0.3);
       border-color: #38bdf8;
@@ -250,37 +289,10 @@
         <span>الجهاز العصبي</span>
         <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-900/90 text-amber-200">43 زوج</span>
       </button>
-      <button type="button" onclick="switchSystem('integrated')" data-sys-btn="integrated" class="sys-tab-btn px-3 py-1.5 rounded-lg font-bold flex items-center gap-2">
-        <svg class="w-4 h-4 text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5l7.5 4.25-7.5 4.25-7.5-4.25L12 4.5zm7.5 8.25L12 17l-7.5-4.25m15 4L12 21l-7.5-4.25" />
-        </svg>
-        <span>العرض المتكامل</span>
-      </button>
     </nav>
 
     <!-- إجراءات سريعة وحالة النماذج -->
     <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-      <button type="button" id="btn-reopen-hero" onclick="openHeroOverview()" data-tip="الصفحة الرئيسية ومؤشرات التحميل" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg viewer-ctrl-btn text-xs font-semibold">
-        <svg class="w-4 h-4 text-sky-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5.5v-6h-5v6H4a1 1 0 01-1-1v-9.5z" />
-        </svg>
-        <span class="hidden lg:inline">الرئيسية</span>
-      </button>
-
-      <button type="button" onclick="openBoneExtractionStudio()" data-tip="استوديو فحص العظام والفقرات المنفردة 3D" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg viewer-ctrl-btn text-xs font-semibold">
-        <svg class="w-4 h-4 text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
-        </svg>
-        <span class="hidden lg:inline">استوديو العظام</span>
-      </button>
-
-      <button type="button" onclick="openQuizModal()" data-tip="بنك أسئلة وتحديات الأحياء للثانوية العامة" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/45 text-sky-200 text-xs font-bold transition-all">
-        <svg class="w-4 h-4 text-sky-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span>بنك الأسئلة</span>
-      </button>
-
       <button type="button" id="btn-toggle-sidebar" onclick="toggleSidebar()" data-tip="فتح/إغلاق فهرس المحتوى المنهجي" class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg viewer-ctrl-btn text-xs font-bold min-h-[38px]">
         <svg class="w-4 h-4 text-sky-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10" />
@@ -295,25 +307,6 @@
       </button>
     </div>
   </header>
-
-  <!-- شريط تبديل الأجهزة المخصص للموبايل (واضح ومرتب بدون تمرير مزعج) -->
-  <div class="md:hidden bg-slate-950/90 border-b border-slate-800/80 px-2 py-1.5 grid grid-cols-4 gap-1 z-20 shrink-0">
-    <button type="button" onclick="switchSystem('skeletal')" data-sys-btn="skeletal" class="sys-tab-btn is-active py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 min-h-[38px]">
-      <span>العظمي</span>
-      <span class="font-mono text-[9px] text-sky-300">206</span>
-    </button>
-    <button type="button" onclick="switchSystem('muscular')" data-sys-btn="muscular" class="sys-tab-btn py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 min-h-[38px]">
-      <span>العضلي</span>
-      <span class="font-mono text-[9px] text-rose-300">600+</span>
-    </button>
-    <button type="button" onclick="switchSystem('nervous')" data-sys-btn="nervous" class="sys-tab-btn py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 min-h-[38px]">
-      <span>العصبي</span>
-      <span class="font-mono text-[9px] text-amber-200">43</span>
-    </button>
-    <button type="button" onclick="switchSystem('integrated')" data-sys-btn="integrated" class="sys-tab-btn py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 min-h-[38px]">
-      <span>متكامل</span>
-    </button>
-  </div>
 
   <!-- ===================================================================== -->
   <!-- 2. مساحة العمل الرئيسية ثلاثية الأبعاد (Main 3D Anatomical Workspace) -->
@@ -510,10 +503,11 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
           </svg>
         </button>
-        <button type="button" id="btn-open-explode" onclick="toggleExplodedBar()" data-tip="نظام تفكيك وتباعد الهيكل العظمي" class="viewer-ctrl-btn w-11 h-10 rounded-xl hidden sm:flex items-center justify-center" aria-label="تفكيك الهيكل">
+        <button type="button" id="btn-open-explode" onclick="toggleExplodedBar()" data-tip="نظام تفكيك وتباعد الهيكل العظمي" class="viewer-ctrl-btn w-11 min-h-[44px] py-1 rounded-xl flex flex-col items-center justify-center gap-0.5" aria-label="تفكيك الهيكل">
           <svg class="w-4 h-4 text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4m12 4V4h-4M4 16v4h4m12-4v4h-4" />
           </svg>
+          <span class="text-[9px] font-bold text-cyan-200 leading-none">تفكيك</span>
         </button>
         <button type="button" onclick="resetSceneAndIsolation(true)" data-tip="إعادة ضبط المشهد وتجميع المجسم" class="viewer-ctrl-btn w-11 h-10 rounded-xl flex items-center justify-center text-sky-300" aria-label="إعادة ضبط">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9">
@@ -569,7 +563,7 @@
     <!-- =================================================================== -->
     <!-- د. نظام تفكيك الهيكل العظمي المطور (Exploded View Controller)       -->
     <!-- =================================================================== -->
-    <div id="exploded-view-bar" class="hidden absolute bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md med-glass-strong rounded-2xl p-3.5 z-20 space-y-2.5">
+    <div id="exploded-view-bar" class="hidden absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md med-glass-strong rounded-2xl p-3.5 z-20 space-y-2.5">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></span>
@@ -624,12 +618,30 @@
 
         <!-- تصنيف الأجهزة داخل الفهرس -->
         <div class="grid grid-cols-5 gap-1 p-1 rounded-xl bg-slate-950/90 border border-slate-800/80 text-[11px]">
-          <button type="button" data-index-sys="active" onclick="setSidebarSystemFilter('active')" class="viewer-ctrl-btn is-active py-1 rounded-lg font-bold">الحالي</button>
-          <button type="button" data-index-sys="skeletal" onclick="setSidebarSystemFilter('skeletal')" class="viewer-ctrl-btn py-1 rounded-lg font-bold">العظمي</button>
-          <button type="button" data-index-sys="muscular" onclick="setSidebarSystemFilter('muscular')" class="viewer-ctrl-btn py-1 rounded-lg font-bold">العضلي</button>
-          <button type="button" data-index-sys="nervous" onclick="setSidebarSystemFilter('nervous')" class="viewer-ctrl-btn py-1 rounded-lg font-bold">العصبي</button>
-          <button type="button" data-index-sys="all" onclick="setSidebarSystemFilter('all')" class="viewer-ctrl-btn py-1 rounded-lg font-bold">الكل</button>
+          <button type="button" data-index-sys="active" onclick="setSidebarSystemFilter('active')" class="viewer-ctrl-btn is-active py-1 rounded-lg font-bold whitespace-nowrap">الحالي</button>
+          <button type="button" data-index-sys="skeletal" onclick="setSidebarSystemFilter('skeletal')" class="viewer-ctrl-btn py-1 rounded-lg font-bold whitespace-nowrap">العظمي</button>
+          <button type="button" data-index-sys="muscular" onclick="setSidebarSystemFilter('muscular')" class="viewer-ctrl-btn py-1 rounded-lg font-bold whitespace-nowrap">العضلي</button>
+          <button type="button" data-index-sys="nervous" onclick="setSidebarSystemFilter('nervous')" class="viewer-ctrl-btn py-1 rounded-lg font-bold whitespace-nowrap">العصبي</button>
+          <button type="button" data-index-sys="all" onclick="setSidebarSystemFilter('all')" class="viewer-ctrl-btn py-1 rounded-lg font-bold whitespace-nowrap">الكل</button>
         </div>
+
+        <!-- تبويب قائمة العناصر التشريحية المفضلة (Bookmarks) -->
+        <button
+          type="button"
+          id="btn-sidebar-favorites"
+          data-index-sys="favorites"
+          onclick="toggleFavoritesSidebarView()"
+          class="sidebar-fav-tab w-full px-3 py-2 rounded-xl flex items-center justify-between gap-2 text-xs font-bold"
+          aria-label="عرض قائمة العناصر التشريحية المفضلة"
+        >
+          <span class="flex items-center gap-2 min-w-0">
+            <svg id="sidebar-fav-tab-icon" class="w-4 h-4 text-rose-400 shrink-0 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            <span class="truncate">قائمة العناصر المفضلة</span>
+          </span>
+          <span id="sidebar-favorites-count" class="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-500/15 text-rose-300 border border-rose-400/30 shrink-0 tabular-nums">0 عنصر</span>
+        </button>
 
         <!-- مربع البحث الذكي -->
         <div class="relative">
@@ -659,125 +671,102 @@
     <!-- =================================================================== -->
     <!-- و. بطاقة المعلومات التشريحية المطورة (Anatomical Info Card #5)      -->
     <!-- =================================================================== -->
-    <div id="item-info-card" class="hidden absolute bottom-16 md:bottom-5 right-2.5 left-2.5 md:left-auto md:right-5 md:w-[420px] max-h-[68dvh] md:max-h-[calc(100%-5rem)] med-glass-strong rounded-2xl z-20 flex flex-col overflow-hidden transition-all duration-300">
+    <div id="item-info-card" class="hidden absolute bottom-2 md:bottom-3 right-2 left-2 sm:left-auto sm:w-[320px] md:right-4 md:w-[330px] max-h-[34dvh] md:max-h-[46dvh] med-glass-strong rounded-xl z-20 flex flex-col overflow-hidden transition-all duration-300">
       <!-- شريط عنوان البطاقة مع أزرار التنقل والتصغير على الموبايل -->
-      <div class="p-3.5 sm:p-4 border-b border-slate-800/90 bg-slate-950/50 shrink-0 space-y-2">
-        <div class="flex items-center justify-between gap-2">
-          <div class="flex items-center gap-1.5 min-w-0">
-            <span id="card-system-pill" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 border border-sky-400/30 shrink-0">الجهاز الهيكلي</span>
-            <span id="card-group-name" class="text-[11px] text-slate-400 truncate">القسم التشريحي</span>
+      <div class="px-2.5 py-1.5 sm:px-3 sm:py-2 border-b border-slate-800/90 bg-slate-950/55 shrink-0 space-y-1">
+        <div class="flex items-center justify-between gap-1.5">
+          <div class="flex items-center gap-1 min-w-0">
+            <span id="card-system-pill" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30 shrink-0">الجهاز الهيكلي</span>
+            <span id="card-group-name" class="text-[10px] text-slate-400 truncate">القسم التشريحي</span>
           </div>
           <div class="flex items-center gap-1 shrink-0">
-            <button type="button" onclick="selectAdjacentCurriculumItem(-1)" data-tip="العنصر التشريحي السابق" class="w-7 h-7 rounded-lg viewer-ctrl-btn flex items-center justify-center text-xs" aria-label="السابق">→</button>
-            <button type="button" onclick="selectAdjacentCurriculumItem(1)" data-tip="العنصر التشريحي التالي" class="w-7 h-7 rounded-lg viewer-ctrl-btn flex items-center justify-center text-xs" aria-label="التالي">←</button>
-            <button type="button" onclick="toggleMobileCardSheet()" data-tip="تصغير / توسيع البطاقة لرؤية المجسم" class="md:hidden w-7 h-7 rounded-lg viewer-ctrl-btn flex items-center justify-center" aria-label="تصغير البطاقة">
-              <svg id="card-sheet-chevron" class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <button type="button" onclick="selectAdjacentCurriculumItem(-1)" data-tip="العنصر التشريحي السابق" class="w-6 h-6 rounded-md viewer-ctrl-btn flex items-center justify-center text-[11px]" aria-label="السابق">→</button>
+            <button type="button" onclick="selectAdjacentCurriculumItem(1)" data-tip="العنصر التشريحي التالي" class="w-6 h-6 rounded-md viewer-ctrl-btn flex items-center justify-center text-[11px]" aria-label="التالي">←</button>
+            <button type="button" onclick="toggleMobileCardSheet()" data-tip="تصغير / توسيع البطاقة لرؤية المجسم" class="md:hidden w-6 h-6 rounded-md viewer-ctrl-btn flex items-center justify-center" aria-label="تصغير البطاقة">
+              <svg id="card-sheet-chevron" class="w-3.5 h-3.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
-            <button type="button" onclick="closeInfoCard()" data-tip="إغلاق البطاقة وإلغاء التحديد" class="w-7 h-7 rounded-lg viewer-ctrl-btn flex items-center justify-center text-slate-300 hover:text-rose-300" aria-label="إغلاق">✕</button>
+            <button type="button" onclick="closeInfoCard()" data-tip="إغلاق البطاقة وإلغاء التحديد" class="w-6 h-6 rounded-md viewer-ctrl-btn flex items-center justify-center text-[11px] text-slate-300 hover:text-rose-300" aria-label="إغلاق">✕</button>
           </div>
         </div>
 
-        <div class="flex items-start justify-between gap-2">
-          <h3 id="card-title-ar" class="text-sm sm:text-base font-extrabold text-white leading-snug">اسم العنصر التشريحي</h3>
-          <span id="card-count-badge" class="font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-slate-900 text-cyan-300 border border-cyan-500/30 shrink-0 tabular-nums">1 عظمة</span>
+        <div class="flex items-center justify-between gap-1.5">
+          <h3 id="card-title-ar" class="text-xs sm:text-[13px] font-extrabold text-white leading-tight truncate">اسم العنصر التشريحي</h3>
+          <div class="flex items-center gap-1 shrink-0">
+            <span id="card-count-badge" class="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-900 text-cyan-300 border border-cyan-500/30 shrink-0 tabular-nums">1 عظمة</span>
+            <button
+              type="button"
+              id="btn-card-bookmark"
+              onclick="toggleCurrentItemBookmark()"
+              data-tip="حفظ في المفضلة"
+              aria-label="حفظ العنصر التشريحي في المفضلة"
+              aria-pressed="false"
+              class="bookmark-heart-btn w-7 h-6 rounded-md viewer-ctrl-btn flex items-center justify-center shrink-0"
+            >
+              <svg id="card-bookmark-icon" class="w-3.5 h-3.5 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- جسم البطاقة المقسم بصرياً (المعلومات العلمية vs التلميحات الامتحانية) -->
-      <div id="card-collapsible-body" class="overflow-y-auto p-3.5 sm:p-4 space-y-3">
+      <div id="card-collapsible-body" class="overflow-y-auto px-2.5 py-2 sm:px-3 sm:py-2 space-y-1.5">
         <!-- شريط الاستماع الصوتي للبيانات المنهجية -->
-        <div class="flex items-center justify-between gap-2">
-          <button type="button" id="btn-speak-card" onclick="toggleCardSpeech()" class="flex-1 py-2 px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/40 text-sky-200 text-xs font-bold flex items-center justify-center gap-2 transition-all">
-            <svg id="icon-speaker-idle" class="w-4 h-4 text-sky-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <div class="flex items-center justify-between gap-1.5">
+          <button type="button" id="btn-speak-card" onclick="toggleCardSpeech()" class="flex-1 py-1 px-2 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/40 text-sky-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all">
+            <svg id="icon-speaker-idle" class="w-3.5 h-3.5 text-sky-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072M11 5L6 9H2v6h4l5 4V5z" />
             </svg>
-            <svg id="icon-speaker-playing" class="hidden w-4 h-4 text-cyan-300 animate-pulse shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg id="icon-speaker-playing" class="hidden w-3.5 h-3.5 text-cyan-300 animate-pulse shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07M11 5L6 9H2v6h4l5 4V5z" />
             </svg>
             <span id="speech-status-text">الاستماع للشرح</span>
           </button>
-          <button type="button" id="btn-auto-speech" onclick="toggleAutoSpeech()" class="py-2 px-2.5 rounded-xl bg-slate-900/90 border border-sky-500/40 text-sky-300 text-[11px] font-semibold shrink-0">
+          <button type="button" id="btn-auto-speech" onclick="toggleAutoSpeech()" class="py-1 px-2 rounded-lg bg-slate-900/90 border border-sky-500/40 text-sky-300 text-[10px] font-semibold shrink-0">
             قراءة تلقائية: مفعلة
           </button>
         </div>
 
         <!-- القسم الأول: الوظيفة والأهمية التشريحية والشرح التفصيلي -->
-        <div class="p-3 rounded-xl bg-slate-900/85 border border-sky-500/25 space-y-1.5">
-          <div class="flex items-center gap-1.5 text-[11px] font-bold text-sky-300">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <div class="p-2 rounded-lg bg-slate-900/85 border border-sky-500/25 space-y-0.5">
+          <div class="flex items-center gap-1 text-[10px] font-bold text-sky-300">
+            <svg class="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <span>الوظيفة والأهمية التشريحية</span>
           </div>
-          <p id="card-function" class="text-xs text-slate-200 leading-relaxed"></p>
+          <p id="card-function" class="text-[11px] text-slate-200 leading-snug"></p>
         </div>
 
         <!-- القسم الثاني: التلميحات الامتحانية الهامة -->
-        <div class="p-3 rounded-xl bg-cyan-950/35 border border-cyan-400/35 space-y-1.5">
-          <div class="flex items-center gap-1.5 text-[11px] font-bold text-cyan-300">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <div class="p-2 rounded-lg bg-cyan-950/35 border border-cyan-400/35 space-y-0.5">
+          <div class="flex items-center gap-1 text-[10px] font-bold text-cyan-300">
+            <svg class="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span>التلميحات الامتحانية (ثانوية عامة)</span>
           </div>
-          <p id="card-exam-note" class="text-xs text-cyan-50/95 leading-relaxed"></p>
+          <p id="card-exam-note" class="text-[11px] text-cyan-50/95 leading-snug"></p>
         </div>
 
         <!-- أزرار التحكم المباشر بالعنصر داخل المشهد -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-0.5 text-[11px]">
-          <button type="button" id="btn-card-isolate" onclick="toggleIsolateMode()" data-tip="عزل العنصر بمفرده في المشهد مع هالة الجزيئات" class="viewer-ctrl-btn py-2 px-2 rounded-xl font-bold flex items-center justify-center gap-1 min-h-[38px]">
+        <div class="grid grid-cols-3 gap-1 pt-0.5 text-[10px]">
+          <button type="button" id="btn-card-isolate" onclick="toggleIsolateMode()" data-tip="عزل العنصر بمفرده في المشهد مع هالة الجزيئات" class="viewer-ctrl-btn py-1 px-1.5 rounded-lg font-bold flex items-center justify-center gap-1 min-h-[28px]">
             <span id="isolate-btn-text">عزل العنصر</span>
           </button>
-          <button type="button" onclick="focusCurrentSelectedItem()" data-tip="تقريب وتركيز الكاميرا على العنصر" class="viewer-ctrl-btn py-2 px-2 rounded-xl font-bold flex items-center justify-center gap-1 min-h-[38px]">
+          <button type="button" onclick="focusCurrentSelectedItem()" data-tip="تقريب وتركيز الكاميرا على العنصر" class="viewer-ctrl-btn py-1 px-1.5 rounded-lg font-bold flex items-center justify-center gap-1 min-h-[28px]">
             <span>تركيز الكاميرا</span>
           </button>
-          <button type="button" id="btn-card-extract" onclick="extractCurrentBone()" data-tip="استخراج العظمة في استوديو الفحص التفصيلي 3D" class="py-2 px-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/50 text-sky-200 font-bold flex items-center justify-center gap-1 min-h-[38px]">
-            <span>استخراج 3D</span>
-          </button>
-          <button type="button" onclick="resetSceneAndIsolation(true)" data-tip="إعادة تجميع المجسم بالكامل" class="viewer-ctrl-btn py-2 px-2 rounded-xl font-bold flex items-center justify-center gap-1 min-h-[38px]">
+          <button type="button" onclick="resetSceneAndIsolation(true)" data-tip="إعادة تجميع المجسم بالكامل" class="viewer-ctrl-btn py-1 px-1.5 rounded-lg font-bold flex items-center justify-center gap-1 min-h-[28px]">
             <span>إعادة التجميع</span>
           </button>
         </div>
       </div>
     </div>
 
-    <!-- =================================================================== -->
-    <!-- ز. شريط التحكم السفلي المخصص للموبايل (Mobile Thumb-Zone Bottom Bar)-->
-    <!-- =================================================================== -->
-    <nav aria-label="أدوات الموبايل السريعة" class="md:hidden absolute bottom-0 inset-x-0 med-glass-strong border-b-0 border-x-0 px-2 pt-1.5 safe-bottom z-20 grid grid-cols-5 gap-1">
-      <button type="button" onclick="toggleSidebar()" class="py-1.5 rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold text-slate-200 active:bg-sky-500/20 min-h-[44px]">
-        <svg class="w-4 h-4 text-sky-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10" />
-        </svg>
-        <span>الفهرس</span>
-      </button>
-      <button type="button" onclick="toggleExplodedBar()" class="py-1.5 rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold text-slate-200 active:bg-sky-500/20 min-h-[44px]">
-        <svg class="w-4 h-4 text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4m12 4V4h-4M4 16v4h4m12-4v4h-4" />
-        </svg>
-        <span>تفكيك</span>
-      </button>
-      <button type="button" onclick="openBoneExtractionStudio()" class="py-1.5 rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold text-slate-200 active:bg-sky-500/20 min-h-[44px]">
-        <svg class="w-4 h-4 text-sky-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
-        </svg>
-        <span>استوديو 3D</span>
-      </button>
-      <button type="button" onclick="openQuizModal()" class="py-1.5 rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold text-slate-200 active:bg-sky-500/20 min-h-[44px]">
-        <svg class="w-4 h-4 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span>الأسئلة</span>
-      </button>
-      <button type="button" onclick="openHeroOverview()" class="py-1.5 rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold text-slate-200 active:bg-sky-500/20 min-h-[44px]">
-        <svg class="w-4 h-4 text-sky-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5.5v-6h-5v6H4a1 1 0 01-1-1v-9.5z" />
-        </svg>
-        <span>الرئيسية</span>
-      </button>
-    </nav>
 
     <!-- =================================================================== -->
     <!-- ح. شاشة التحميل الأولية السريعة والعصرية (Modern Loading Overlay)   -->
@@ -806,6 +795,22 @@
     </div>
 
   </main>
+
+  <!-- شريط تبديل الأجهزة المخصص للموبايل في أسفل الصفحة -->
+  <div class="md:hidden bg-slate-950/90 border-t border-slate-800/80 px-2 pt-1.5 safe-bottom grid grid-cols-3 gap-1 z-20 shrink-0">
+    <button type="button" onclick="switchSystem('skeletal')" data-sys-btn="skeletal" class="sys-tab-btn is-active py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 min-h-[38px]">
+      <span>العظمي</span>
+      <span class="font-mono text-[9px] text-sky-300">206</span>
+    </button>
+    <button type="button" onclick="switchSystem('muscular')" data-sys-btn="muscular" class="sys-tab-btn py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 min-h-[38px]">
+      <span>العضلي</span>
+      <span class="font-mono text-[9px] text-rose-300">600+</span>
+    </button>
+    <button type="button" onclick="switchSystem('nervous')" data-sys-btn="nervous" class="sys-tab-btn py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 min-h-[38px]">
+      <span>العصبي</span>
+      <span class="font-mono text-[9px] text-amber-200">43</span>
+    </button>
+  </div>
 
   <!-- ===================================================================== -->
   <!-- 3. استوديو فحص العظام والفقرات المنفردة 3D (Bone Extraction Studio)   -->
