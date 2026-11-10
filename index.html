@@ -366,14 +366,8 @@
       </button>
     </nav>
 
-    <!-- إجراءات سريعة وحالة النماذج -->
+      <!-- إجراءات سريعة وحالة النماذج -->
     <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-      <button type="button" id="btn-open-encyclopedia" onclick="openSystemsEncyclopedia()" data-tip="الموسوعة التشريحية الشاملة لجميع أجهزة الجسم الحيوية" class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/35 text-emerald-300 text-xs font-bold min-h-[38px] transition-all">
-        <svg class="w-4 h-4 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-        </svg>
-        <span class="hidden sm:inline">موسوعة الأجهزة</span>
-      </button>
 
       <button type="button" id="btn-toggle-sidebar" onclick="toggleSidebar()" data-tip="فتح/إغلاق فهرس المحتوى المنهجي" class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg viewer-ctrl-btn text-xs font-bold min-h-[38px]">
         <svg class="w-4 h-4 text-sky-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -786,86 +780,66 @@
     <!-- =================================================================== -->
     <!-- و. بطاقة المعلومات التشريحية المطورة (Anatomical Info Card #5)      -->
     <!-- =================================================================== -->
-    <div id="item-info-card" class="hidden absolute bottom-2 md:bottom-3 right-2 left-2 sm:left-auto sm:w-[320px] md:right-4 md:w-[330px] max-h-[34dvh] md:max-h-[46dvh] med-glass-strong rounded-xl z-20 flex flex-col overflow-hidden transition-all duration-300">
-      <!-- شريط عنوان البطاقة مع أزرار التنقل والتصغير على الموبايل -->
-      <div class="px-2.5 py-1.5 sm:px-3 sm:py-2 border-b border-slate-800/90 bg-slate-950/55 shrink-0 space-y-1">
-        <div class="flex items-center justify-between gap-1.5">
-          <div class="flex items-center gap-1 min-w-0">
-            <span id="card-system-pill" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30 shrink-0">الجهاز الهيكلي</span>
-            <span id="card-group-name" class="text-[10px] text-slate-400 truncate">القسم التشريحي</span>
+    <div
+      id="item-info-card"
+      class="hidden absolute bottom-4 right-4 left-4 md:right-6 md:w-[400px] md:max-w-[400px] md:bottom-6 max-h-[70vh] med-glass-strong rounded-3xl z-20 flex flex-col overflow-hidden transition-all duration-300 shadow-2xl border border-white/10 backdrop-blur-2xl"
+    >
+      <!-- شريط عنوان البطاقة -->
+      <div class="px-5 py-4 border-b border-white/5 bg-white/5 shrink-0 flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <span id="card-system-pill" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-200 border border-sky-400/20">الجهاز الهيكلي</span>
           </div>
-          <div class="flex items-center gap-1 shrink-0">
-            <button type="button" onclick="selectAdjacentCurriculumItem(-1)" data-tip="العنصر التشريحي السابق" class="w-6 h-6 rounded-md viewer-ctrl-btn flex items-center justify-center text-[11px]" aria-label="السابق">→</button>
-            <button type="button" onclick="selectAdjacentCurriculumItem(1)" data-tip="العنصر التشريحي التالي" class="w-6 h-6 rounded-md viewer-ctrl-btn flex items-center justify-center text-[11px]" aria-label="التالي">←</button>
-            <button type="button" onclick="toggleMobileCardSheet()" data-tip="تصغير / توسيع البطاقة لرؤية المجسم" class="md:hidden w-6 h-6 rounded-md viewer-ctrl-btn flex items-center justify-center" aria-label="تصغير البطاقة">
-              <svg id="card-sheet-chevron" class="w-3.5 h-3.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            <button type="button" onclick="closeInfoCard()" data-tip="إغلاق البطاقة وإلغاء التحديد" class="w-6 h-6 rounded-md viewer-ctrl-btn flex items-center justify-center text-[11px] text-slate-300 hover:text-rose-300" aria-label="إغلاق">✕</button>
-          </div>
+          <h3 id="card-title-ar" class="text-lg font-extrabold text-white leading-tight truncate">اسم العنصر</h3>
+          <p id="card-title-en" class="text-xs text-sky-200/60 font-mono font-medium truncate">Anatomical Term</p>
         </div>
-
-        <div class="flex items-center justify-between gap-1.5">
-          <div class="min-w-0">
-            <h3 id="card-title-ar" class="text-xs sm:text-[13px] font-extrabold text-white leading-tight truncate">اسم العنصر التشريحي</h3>
-            <p id="card-title-en" class="text-[9.5px] text-sky-300/80 font-mono font-medium truncate">Anatomical Term</p>
-          </div>
-          <div class="flex items-center gap-1 shrink-0">
-            <span id="card-count-badge" class="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-900 text-cyan-300 border border-cyan-500/30 shrink-0 tabular-nums">1 عظمة</span>
-            <button
-              type="button"
-              id="btn-card-bookmark"
-              onclick="toggleCurrentItemBookmark()"
-              data-tip="حفظ في المفضلة"
-              aria-label="حفظ العنصر التشريحي في المفضلة"
-              aria-pressed="false"
-              class="bookmark-heart-btn w-7 h-6 rounded-md viewer-ctrl-btn flex items-center justify-center shrink-0"
-            >
-              <svg id="card-bookmark-icon" class="w-3.5 h-3.5 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-            </button>
-          </div>
+        <div class="flex items-center gap-1 shrink-0">
+           <button type="button" onclick="closeInfoCard()" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all" aria-label="إغلاق">✕</button>
         </div>
       </div>
 
-      <!-- جسم البطاقة المقسم بصرياً (المعلومات العلمية vs التلميحات الامتحانية) -->
-      <div id="card-collapsible-body" class="overflow-y-auto px-2.5 py-2 sm:px-3 sm:py-2 space-y-1.5">
-        <!-- المشغل الصوتي العصري المتطور (Neural Biology Audio Player) -->
-        <div id="neural-audio-player-container" class="rounded-xl bg-slate-900/90 border border-sky-500/30 p-2 space-y-1.5 shadow-md">
-          <!-- شريط التحكم الأساسي السريع -->
-          <div class="flex items-center justify-between gap-1.5">
-            <!-- زر التشغيل / الإيقاف المؤقت الرئيسي -->
-            <button
-              type="button"
-              id="btn-speak-card"
-              onclick="window.BioNeuralPlayer && window.BioNeuralPlayer.togglePlay()"
-              class="flex-1 py-1.5 px-2 rounded-lg bg-gradient-to-r from-sky-500/20 to-cyan-500/15 hover:from-sky-500/30 hover:to-cyan-500/25 border border-sky-400/40 text-sky-100 text-[11px] font-bold flex items-center justify-between gap-1.5 transition-all"
-              data-tip="تشغيل / إيقاف الشرح الصوتي البشري"
-              aria-label="تشغيل الشرح الصوتي"
-            >
-              <div class="flex items-center gap-1.5 min-w-0">
-                <!-- أيقونة التشغيل العادية -->
-                <svg id="icon-speaker-idle" class="w-3.5 h-3.5 text-sky-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <!-- أيقونة الإيقاف المؤقت -->
-                <svg id="icon-speaker-playing" class="hidden w-3.5 h-3.5 text-cyan-300 animate-pulse shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span id="speech-status-text" class="truncate">استماع للشرح الطبيعي</span>
-              </div>
+      <!-- جسم البطاقة -->
+      <div class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        <!-- المحتوى التشريحي (سيتم تحديثه عبر JS) -->
+        <div id="card-content-wrapper" class="space-y-5">
+        <!-- المحتوى التشريحي (سيتم تحديثه عبر JS) -->
+        <div id="card-content-wrapper" class="space-y-5">
+          <!-- تبويب 1: البيان والوظيفة -->
+          <div id="card-tab-content-overview" class="space-y-2">
+            <h4 class="text-xs font-bold text-emerald-300 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> البيان والوظيفة
+            </h4>
+            <p id="card-function" class="text-sm text-slate-200 leading-relaxed"></p>
+            <div id="card-item-role-box" class="p-3 rounded-xl bg-slate-800/50 text-[11px] text-sky-200 leading-tight">
+               <span class="font-bold text-sky-300">الدور الحركي والدعامي: </span><span id="card-item-role"></span>
+            </div>
+          </div>
 
-              <!-- مؤشر موجات الصوت التفاعلية -->
-              <div class="flex items-center gap-0.5 shrink-0 px-1 py-0.5 bg-slate-950/70 rounded">
-                <span class="audio-wave-bar h-2 w-0.5 bg-sky-400 rounded-full"></span>
-                <span class="audio-wave-bar h-3.5 w-0.5 bg-cyan-300 rounded-full"></span>
-                <span class="audio-wave-bar h-1.5 w-0.5 bg-sky-400 rounded-full"></span>
-                <span class="audio-wave-bar h-3 w-0.5 bg-cyan-300 rounded-full"></span>
-              </div>
-            </button>
+          <!-- تبويب 2: المعالم والتركيب -->
+          <div id="card-tab-content-landmarks" class="hidden space-y-2">
+            <h4 class="text-xs font-bold text-sky-300 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span> المعالم والتركيب
+            </h4>
+            <p id="card-landmarks-text" class="text-sm text-slate-200 leading-relaxed"></p>
+          </div>
+
+          <!-- تبويب 3: أسرار الامتحان -->
+          <div id="card-tab-content-exam" class="hidden space-y-2">
+            <h4 class="text-xs font-bold text-rose-300 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> أسرار الامتحان
+            </h4>
+            <p id="card-exam-note" class="text-sm text-slate-200 leading-relaxed"></p>
+            <div id="card-curriculum-box" class="p-3 rounded-xl bg-rose-950/30 border border-rose-500/20 text-[11px] text-rose-200 leading-tight">
+               <span class="font-bold text-rose-300">الأهمية المنهجية: </span><span id="card-curriculum-importance"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- مشغل الصوت (في أسفل البطاقة) -->
+        <div id="neural-audio-player-container" class="mt-4 rounded-2xl bg-black/20 border border-white/10 p-3 space-y-3">
+          <!-- المشغل الصوتي هنا... -->
+        </div>
+      </div>
 
             <!-- زر إيقاف نهائي (Stop) - ينهي جلسة القراءة بالكامل ويعود للبداية -->
             <button
@@ -873,11 +847,11 @@
               id="btn-audio-stop"
               onclick="window.BioNeuralPlayer && window.BioNeuralPlayer.stop()"
               data-tip="إيقاف نهائي وإنهاء القراءة"
-              class="w-7 h-7 rounded-lg viewer-ctrl-btn flex items-center justify-center text-xs shrink-0 hover:text-rose-400 hover:border-rose-500/40 transition-all text-slate-400"
+              class="w-11 h-11 rounded-xl viewer-ctrl-btn flex items-center justify-center text-xs shrink-0 hover:text-rose-400 hover:border-rose-500/40 transition-all text-rose-300/80 bg-rose-500/10 border border-rose-500/20"
               aria-label="إيقاف نهائي"
             >
-              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                <rect x="6" y="6" width="12" height="12" rx="1.5" />
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
               </svg>
             </button>
 

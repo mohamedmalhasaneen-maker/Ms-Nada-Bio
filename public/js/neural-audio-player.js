@@ -125,16 +125,12 @@
           });
           clearTimeout(timeoutId);
 
-          if (!res.ok) {
-            const errJson = await res.json().catch(() => ({}));
-            const customErr = new Error(errJson.message || `HTTP ${res.status}`);
-            customErr.statusCode = res.status;
-            customErr.errorType = errJson.error || 'HTTP_ERROR';
+          const data = await res.json().catch(() => ({}));
+          if (data.quotaExceeded || !data.audioBase64 || !res.ok) {
+            const customErr = new Error(data.message || 'QUOTA_EXCEEDED');
+            customErr.quotaExceeded = Boolean(data.quotaExceeded);
             throw customErr;
           }
-
-          const data = await res.json();
-          if (!data.audioBase64) throw new Error('لم يتم استلام مقطع صوتي.');
 
           const byteChars = atob(data.audioBase64);
           const byteNumbers = new Array(byteChars.length);
@@ -165,7 +161,76 @@
     }
   }
 
-  // تشغيل الجملة/القسم الحالي بسلاسة
+  // إلغاء جميع مشغلات الصوت والنطق المباشر لمنع التداخل
+  function cancelAllActiveAudio() {
+    clearTimeout(state.pauseTimeout);
+    state.sessionId++;
+    if (state.audioElement) {
+      try {
+        state.audioElement.pause();
+        state.audioElement.currentTime = 0;
+      } catch (_) {}
+    }
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (_) {}
+    }
+  }
+
+  // تشغيل النطق التلقائي التفاعلي المدمج عبر SpeechSynthesis عند تعذر استجابة السيرفر
+  function playSpeechSynthesisFallback(segment, currentSession) {
+    if (!('speechSynthesis' in window)) {
+      state.isPlaying = false;
+      state.isLoading = false;
+      updateUI();
+      return;
+    }
+
+    try {
+      window.speechSynthesis.cancel();
+    } catch (_) {}
+
+    state.audioEngine = 'speech';
+    state.speakerName = 'شرح صوتي مدمج (معلمة الأحياء)';
+    state.isLoading = false;
+    state.isPlaying = true;
+    updateUI();
+
+    const utterance = new SpeechSynthesisUtterance(segment.spokenText);
+    utterance.lang = 'ar-EG';
+    utterance.rate = Math.max(0.75, Math.min(1.35, state.speed));
+    utterance.volume = state.isMuted ? 0 : state.volume;
+    utterance.pitch = 1.05;
+
+    const voices = window.speechSynthesis.getVoices();
+    if (voices && voices.length > 0) {
+      const arVoice = voices.find((v) => (v.lang && v.lang.toLowerCase().includes('ar')) || (v.name && v.name.toLowerCase().includes('arabic')));
+      if (arVoice) {
+        utterance.voice = arVoice;
+      }
+    }
+
+    utterance.onend = function () {
+      if (state.sessionId !== currentSession || !state.isPlaying) return;
+      onSegmentEnded();
+    };
+
+    utterance.onerror = function (e) {
+      console.warn('SpeechSynthesis error:', e);
+      if (state.sessionId !== currentSession || !state.isPlaying) return;
+      onSegmentEnded();
+    };
+
+    try {
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn('Speech synthesis speak error:', e);
+      onSegmentEnded();
+    }
+  }
+
+  // تشغيل الجملة/القسم الحالي بسلاسة وبشكل تلقائي لجميع الأعضاء بدون طلب تسجيل يدوية
   async function playCurrentSegment() {
     clearTimeout(state.pauseTimeout);
 
@@ -179,10 +244,14 @@
     const itemId = state.currentItem ? state.currentItem.id : '';
     const sectionKey = segment.type || 'overview';
 
+    if ('speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch (_) {}
+    }
+
     state.isPlaying = true;
     state.isPaused = false;
 
-    // 1. الفحص: هل يوجد تسجيل صوتي بشري مسجل ومرفوع لهذا القسم؟
+    // 1. الفحص الأول: هل يوجد تسجيل بشري مسجل لهذا القسم؟
     let humanRec = null;
     if (window.BioHumanAudioEngine) {
       humanRec = window.BioHumanAudioEngine.getHumanRecording(itemId, sectionKey);
@@ -192,7 +261,6 @@
     const audio = state.audioElement;
 
     if (humanRec) {
-      // تشغيل تسجيل بشري حقيقي!
       state.audioEngine = 'human';
       state.speakerName = humanRec.speakerName || 'مس / ندى بدوي (شرح بشري حقيقي)';
       state.isLoading = false;
@@ -209,20 +277,20 @@
         await audio.play();
         if (state.sessionId !== currentSession) return;
         updateUI();
+        return;
       } catch (err) {
-        console.warn('Human audio play error:', err);
+        console.warn('Human audio play failed, falling back to auto TTS...', err);
       }
-      return;
     }
 
-    // 2. إذا لم يرفع تسجيل بشري، جلب الصوت التوليدي المصري المحفوظ بالذاكرة
+    // 2. الفحص الثاني: جلب الصوت التوليدي المصري من السيرفر أو الذاكرة
     state.audioEngine = 'neural';
     state.speakerName = 'مس / ندى بدوي (توليد مصري طبيعي)';
     state.isLoading = true;
     updateUI();
 
     try {
-      const audioUrl = await fetchNeuralAudioWithRetry(segment.spokenText, state.voiceId, 2);
+      const audioUrl = await fetchNeuralAudioWithRetry(segment.spokenText, state.voiceId, 1);
       if (state.sessionId !== currentSession || !state.isPlaying) return;
 
       state.isLoading = false;
@@ -237,11 +305,8 @@
     } catch (err) {
       if (state.sessionId !== currentSession || !state.isPlaying) return;
 
-      state.isLoading = false;
-      state.isPlaying = false;
-      updateUI();
-
-      showAudioToast(`🎙️ لم يتم رفع تسجيل بشري لهذا العضو حتى الآن. يمكنك تسجيله في استوديو المطور.`, 'warn');
+      // 3. التبديل التلقائي الصامت لمحرك النطق المدمج فوراً بدون أي رسائل طلب تسجيل
+      playSpeechSynthesisFallback(segment, currentSession);
     }
   }
 
@@ -263,22 +328,16 @@
   function onAudioError(e) {
     console.warn('Audio element error:', e);
     if (state.isPlaying) {
-      showAudioToast('تجاوز المقطع الصوتي الحالي...', 'warn');
       onSegmentEnded();
     }
   }
 
   function finishPlayback() {
+    cancelAllActiveAudio();
     state.isPlaying = false;
     state.isPaused = false;
     state.isLoading = false;
     state.currentSegmentIndex = 0;
-    clearTimeout(state.pauseTimeout);
-
-    if (state.audioElement) {
-      state.audioElement.pause();
-      state.audioElement.currentTime = 0;
-    }
     updateUI();
   }
 
@@ -317,6 +376,11 @@
     if (state.isPaused) {
       state.isPaused = false;
       state.isPlaying = true;
+      if (state.audioEngine === 'speech') {
+        const cur = state.segments[state.currentSegmentIndex];
+        if (cur) playSpeechSynthesisFallback(cur, state.sessionId);
+        return;
+      }
       if (state.audioElement && state.audioElement.src) {
         state.audioElement.play().catch(() => playCurrentSegment());
         updateUI();
@@ -328,13 +392,7 @@
   }
 
   function pause() {
-    clearTimeout(state.pauseTimeout);
-    state.sessionId++;
-
-    if (state.audioElement) {
-      state.audioElement.pause();
-    }
-
+    cancelAllActiveAudio();
     state.isPaused = true;
     state.isPlaying = false;
     state.isLoading = false;
@@ -350,15 +408,7 @@
   }
 
   function stop() {
-    clearTimeout(state.pauseTimeout);
-    state.sessionId++;
-
-    if (state.audioElement) {
-      state.audioElement.pause();
-      state.audioElement.currentTime = 0;
-      state.audioElement.src = '';
-    }
-
+    cancelAllActiveAudio();
     state.isPlaying = false;
     state.isPaused = false;
     state.isLoading = false;
@@ -589,9 +639,12 @@
       if (state.audioEngine === 'human') {
         engineBadge.innerText = '🎙️ تسجيل بشري حقيقي (مس / ندى بدوي)';
         engineBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/40';
-      } else {
+      } else if (state.audioEngine === 'neural') {
         engineBadge.innerText = '🎙️ توليد مصري طبيعي بالذاكرة';
         engineBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30';
+      } else {
+        engineBadge.innerText = '🎙️ شرح صوتي مدمج تلقائي';
+        engineBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30';
       }
     }
 

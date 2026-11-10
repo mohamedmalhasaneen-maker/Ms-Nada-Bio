@@ -616,7 +616,7 @@ app.post('/api/tts/test', async (req: Request, res: Response) => {
     const statusCode = isQuota ? 429 : 500;
     logAudioError('gemini-tts', isQuota ? 'QUOTA_EXCEEDED' : 'TTS_TEST_FAILED', statusCode, err?.message || 'Test failed');
 
-    res.status(statusCode).json({
+    res.status(isQuota ? 200 : 500).json({
       success: false,
       quotaExceeded: isQuota,
       engine: 'GoogleGenAI Gemini TTS',
@@ -628,8 +628,17 @@ app.post('/api/tts/test', async (req: Request, res: Response) => {
   }
 });
 
+// Global quota circuit breaker
+let globalQuotaExceededUntil = 0;
+
 // Primary Neural TTS generation endpoint
 app.post('/api/tts', async (req: Request, res: Response): Promise<void> => {
+  // 0. Circuit breaker check
+  if (Date.now() < globalQuotaExceededUntil) {
+    res.json({ success: false, quotaExceeded: true, message: 'تم استنفاد حصة التوليد مؤقتاً.' });
+    return;
+  }
+  
   try {
     const { text, voiceName = 'Kore' } = req.body || {};
 
@@ -758,20 +767,19 @@ app.post('/api/tts', async (req: Request, res: Response): Promise<void> => {
     });
   } catch (err: any) {
     const isQuota = err?.message?.includes('429') || err?.message?.includes('QUOTA') || err?.message?.includes('RESOURCE_EXHAUSTED');
-    const statusCode = isQuota ? 429 : 500;
-    logAudioError('gemini-3.8-flash-lite-tts', isQuota ? 'QUOTA_EXCEEDED' : 'TTS_GENERATION_FAILED', statusCode, err?.message || 'TTS generation failed');
-
     if (isQuota) {
-      console.warn('[Audio Server] Gemini TTS quota reached (429). Pre-cached and human audio recordings remain available.');
+      globalQuotaExceededUntil = Date.now() + 60000;
+      console.warn('[Audio Server] Gemini TTS quota reached (429). Falling back to client-side speech engine and blocking requests for 1 minute.');
     } else {
+      logAudioError('gemini-3.8-flash-lite-tts', 'TTS_GENERATION_FAILED', 500, err?.message || 'TTS generation failed');
       console.error('Error generating Neural TTS:', err?.message || err);
     }
 
-    res.status(statusCode).json({
+    res.status(isQuota ? 200 : 500).json({
       success: false,
       error: isQuota ? 'QUOTA_EXCEEDED' : 'TTS_GENERATION_FAILED',
       message: isQuota
-        ? 'تم استنفاد حصة التوليد اليومية (429). يمكنك استماع الشرح المسجل مقدماً أو رفع التسجيلات البشرية.'
+        ? 'تم استنفاد حصة التوليد اليومية (429).'
         : (err?.message || 'فشل توليد الشرح الصوتي.'),
       quotaExceeded: isQuota
     });

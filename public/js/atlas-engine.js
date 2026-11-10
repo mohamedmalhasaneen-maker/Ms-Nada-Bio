@@ -2481,7 +2481,18 @@
       return;
     }
 
-    let html = `<div class="space-y-4">`;
+    let html = `<div class="space-y-4">
+      <button
+        type="button"
+        onclick="if(window.BioNeuralPlayer) window.BioNeuralPlayer.stop()"
+        class="flex w-full items-center justify-center gap-2 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition-all"
+        aria-label="إيقاف الصوت"
+      >
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+           <rect x="6" y="6" width="12" height="12" rx="1.5" />
+        </svg>
+        إيقاف الصوت فوراً
+      </button>`;
     html += `
       <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
         <div>

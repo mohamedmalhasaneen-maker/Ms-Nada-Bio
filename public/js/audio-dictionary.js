@@ -459,7 +459,9 @@
     if (item.classification) overviewParts.push(`التصنيف التشريحي: ${item.classification}.`);
     if (item.location) overviewParts.push(`الموقع: ${item.location}.`);
     if (item.functionDesc) overviewParts.push(item.functionDesc);
-    if (item.role && !item.functionDesc) overviewParts.push(`الوظيفة الحيوية: ${item.role}.`);
+    if (item.primaryFunction) overviewParts.push(`الوظيفة الرئيسية: ${item.primaryFunction}.`);
+    if (item.secondaryFunction) overviewParts.push(`الوظيفة الثانوية: ${item.secondaryFunction}.`);
+    if (item.role && !item.functionDesc && !item.primaryFunction) overviewParts.push(`الوظيفة الحيوية: ${item.role}.`);
     if (overviewParts.length > 0) {
       addSectionChunks(overviewParts.join(' '), 'overview', 'البيان والوظيفة');
     }
@@ -468,6 +470,7 @@
     const landmarksParts = [];
     if (item.landmarks) landmarksParts.push(`المعالم التشريحية: ${item.landmarks}.`);
     if (item.structure) landmarksParts.push(`التركيب الدقيق: ${item.structure}.`);
+    if (item.relations) landmarksParts.push(`العلاقات والاتصالات التشريحية: ${item.relations}.`);
     if (item.articulations) landmarksParts.push(`التأثير والتمفصل: ${item.articulations}.`);
     if (item.origin) landmarksParts.push(`منشأ العضلة: ${item.origin}.`);
     if (item.insertion) landmarksParts.push(`ارتكاز العضلة: ${item.insertion}.`);
