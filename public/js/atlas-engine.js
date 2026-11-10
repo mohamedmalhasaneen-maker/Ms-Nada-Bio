@@ -114,10 +114,8 @@
 
   const highlightMaterial = new THREE.MeshStandardMaterial({
     color: 0x38bdf8,
-    emissive: 0x0284c7,
-    emissiveIntensity: 0.65,
-    roughness: 0.22,
-    metalness: 0.15
+    roughness: 0.45,
+    metalness: 0.05
   });
 
   const dimmedMaterial = new THREE.MeshStandardMaterial({
@@ -222,37 +220,8 @@
   selectionParticlesGroup.add(focalAuraLight);
 
   function activateSelectionParticles(center, size, sysKey, isIsolated) {
-    selectionParticlesGroup.position.copy(center);
-    const maxDim = Math.max(size.x, size.y, size.z, 0.22);
-    const targetScale = Math.max(maxDim * 1.5, 0.42);
-    selectionParticlesGroup.scale.set(targetScale, targetScale, targetScale);
-
-    let col = 0x38bdf8;
-    let lightCol = 0x0ea5e9;
-    if (sysKey === "muscular") {
-      col = 0xfb7185;
-      lightCol = 0xe11d48;
-    } else if (sysKey === "nervous") {
-      col = 0xfacc15;
-      lightCol = 0xeab308;
-    } else if (sysKey === "integrated") {
-      col = 0x2dd4bf;
-      lightCol = 0x06b6d4;
-    }
-
-    cloudMaterial.color.setHex(col);
-    orbitalRing1.material.color.setHex(col);
-    orbitalRing2.material.color.setHex(col);
-    focalAuraLight.color.setHex(lightCol);
-
-    selectionParticlesGroup.visible = true;
-    const targetOpacity = isIsolated ? 0.96 : 0.78;
-    const targetLightIntensity = isIsolated ? 2.1 : 1.3;
-
-    gsap.killTweensOf([cloudMaterial, orbitalRing1.material, orbitalRing2.material, focalAuraLight]);
-    gsap.to(cloudMaterial, { opacity: targetOpacity, duration: 0.45, ease: "power2.out" });
-    gsap.to([orbitalRing1.material, orbitalRing2.material], { opacity: targetOpacity * 0.88, duration: 0.45, ease: "power2.out" });
-    gsap.to(focalAuraLight, { intensity: targetLightIntensity, duration: 0.45, ease: "power2.out" });
+    // تم إلغاء الهالة والتوهج الضوئي تماماً بناءً على طلب المستخدم للمحافظة على نظافة المجسم
+    selectionParticlesGroup.visible = false;
   }
 
   function hideSelectionParticles() {
@@ -513,6 +482,13 @@
         st.progress = 100;
         updateModelStatusUI();
         hideModelErrorBanner();
+
+        // تشغيل نظام الفحص والتدقيق التلقائي الشامل لعرض تقرير في لوحة المطور
+        if (window.ANATOMICAL_REGISTRY && window.ANATOMICAL_REGISTRY.runAnatomicalMappingAudit) {
+          setTimeout(() => {
+            window.ANATOMICAL_REGISTRY.runAnatomicalMappingAudit();
+          }, 350);
+        }
 
         const cbs = st.callbacks.splice(0);
         cbs.forEach((cb) => cb(true));
@@ -1666,33 +1642,78 @@
         }
       }
 
-      // تحديث بطاقة المعلومات التشريحية وحالة زر القلب (المفضلة)
+      // تحديث بطاقة المعلومات التشريحية المطورة ذات التبويبات والمفضلة
       const cardTitleAr = document.getElementById("card-title-ar");
+      const cardTitleEn = document.getElementById("card-title-en");
       const cardSysBadge = document.getElementById("card-system-pill");
       const cardGroupName = document.getElementById("card-group-name");
       const cardCountBadge = document.getElementById("card-count-badge");
       const cardFunction = document.getElementById("card-function");
       const cardExamNote = document.getElementById("card-exam-note");
+      const cardItemClass = document.getElementById("card-item-class");
+      const cardItemLoc = document.getElementById("card-item-loc");
+      const cardItemRole = document.getElementById("card-item-role");
+      const cardItemRoleBox = document.getElementById("card-item-role-box");
+      const cardLandmarksText = document.getElementById("card-landmarks-text");
+      const cardRelationsLabel = document.getElementById("card-relations-label");
+      const cardRelationsText = document.getElementById("card-relations-text");
+      const cardCurriculumImportance = document.getElementById("card-curriculum-importance");
+      const cardCurriculumBox = document.getElementById("card-curriculum-box");
       const extractBtn = document.getElementById("btn-card-extract");
       const itemInfoCard = document.getElementById("item-info-card");
 
       if (cardTitleAr) cardTitleAr.innerText = item.name;
+      if (cardTitleEn) cardTitleEn.innerText = item.englishName || "";
       if (cardSysBadge) cardSysBadge.innerText = resolvedSystemName;
       if (cardGroupName) cardGroupName.innerText = resolvedSectionName;
       if (cardCountBadge) {
         const unit = item.system === "muscular" ? "عضلة" : item.system === "nervous" ? "عصب" : "عظمة";
         cardCountBadge.innerText = `${item.count || 1} ${unit}`;
       }
+      if (cardItemClass) cardItemClass.innerText = item.classification || item.muscleType || "عنصر تشريحي";
+      if (cardItemLoc) cardItemLoc.innerText = item.location || resolvedSectionName;
       if (cardFunction) {
         cardFunction.innerText = item.functionDesc || "الوظيفة الحيوية والتكامل التشريحي وفق منهج الأحياء.";
       }
+      if (cardItemRole) {
+        cardItemRole.innerText = item.role || item.actions || "";
+      }
+      if (cardItemRoleBox) {
+        cardItemRoleBox.classList.toggle("hidden", !(item.role || item.actions));
+      }
+
+      if (cardLandmarksText) {
+        cardLandmarksText.innerText = item.landmarks || item.structure || "معالم تشريحية دقيقة وفق أطلس التشريح البشري المعتمد.";
+      }
+      if (cardRelationsLabel && cardRelationsText) {
+        if (item.system === "muscular") {
+          cardRelationsLabel.innerText = "المنشأ، الارتكاز، التعصيب والمفاصل:";
+          cardRelationsText.innerText = `المنشأ: ${item.origin || "-"} | الارتكاز: ${item.insertion || "-"} | العصب: ${item.innervation || "-"} | المفاصل: ${item.jointsCrossed || "-"}`;
+        } else if (item.system === "nervous") {
+          cardRelationsLabel.innerText = "المسارات والتفرعات والجهاز الذاتي:";
+          cardRelationsText.innerText = `${item.cranialSpinalDetails || "-"} | التأثير الذاتي: ${item.autonomicRelations || "-"}`;
+        } else {
+          cardRelationsLabel.innerText = "المفاصل والعظام المرتبطة والعضلات:";
+          cardRelationsText.innerText = `${item.articulations || "-"} | العضلات المرتبطة: ${item.muscleAttachments || "-"}`;
+        }
+      }
+
       if (cardExamNote) {
         cardExamNote.innerText = item.examNote || "راجع تفاصيل الاتصال والتمفصل وتنسيق السيالات العصبية في المنهج.";
       }
+      if (cardCurriculumImportance) {
+        cardCurriculumImportance.innerText = item.curriculumImportance || "";
+      }
+      if (cardCurriculumBox) {
+        cardCurriculumBox.classList.toggle("hidden", !item.curriculumImportance);
+      }
+
       if (extractBtn) {
         const isSkeletalItem = (item.system || activeSystem) === "skeletal" || Boolean(item.boneId);
         extractBtn.classList.toggle("hidden", !isSkeletalItem);
       }
+
+      setCardTab('overview');
 
       updateCardBookmarkButtonUI(false);
 
@@ -1703,8 +1724,10 @@
 
       setInteractionStatus(`محدد حالياً: ${item.name}`, "active");
 
-      // القراءة الصوتية التلقائية عند فتح البطاقة (إن كانت مفعلة)
-      speakCardContent(item, false);
+      // تجهيز الشرح الصوتي في المشغل العصري وتفعيل التشغيل التلقائي فوراً
+      if (window.BioNeuralPlayer) {
+        window.BioNeuralPlayer.loadItem(item, resolvedSectionName, resolvedSystemName, true);
+      }
 
       // تمييز العنصر في الفهرس
       document.querySelectorAll(".index-item-card").forEach((el) => el.classList.remove("is-selected"));
@@ -1716,6 +1739,17 @@
     });
   }
   window.selectItem = selectItem;
+
+  function setCardTab(tabName) {
+    const tabs = ["overview", "landmarks", "exam"];
+    tabs.forEach((t) => {
+      const btn = document.getElementById(`tab-btn-${t}`);
+      const content = document.getElementById(`card-tab-content-${t}`);
+      if (btn) btn.classList.toggle("is-active", t === tabName);
+      if (content) content.classList.toggle("hidden", t !== tabName);
+    });
+  }
+  window.setCardTab = setCardTab;
 
   function setMobileCardMinimized(minimized) {
     isMobileSheetMinimized = minimized;
@@ -1730,107 +1764,26 @@
   }
   window.toggleMobileCardSheet = toggleMobileCardSheet;
 
-  // --- محرك القراءة الصوتية العربية (Arabic TTS) ---
-  let isSpeechEnabled = true;
-  let isSpeakingNow = false;
-
-  function cleanTextForSpeech(text) {
-    if (!text) return "";
-    return text.replace(/[•()\/\\_\-–—]/g, " ").replace(/\s+/g, " ").trim();
-  }
-
-  function updateSpeechUI(speaking) {
-    const iconPlaying = document.getElementById("icon-speaker-playing");
-    const iconIdle = document.getElementById("icon-speaker-idle");
-    const statusText = document.getElementById("speech-status-text");
-    const btn = document.getElementById("btn-speak-card");
-
-    if (iconPlaying && iconIdle && statusText) {
-      iconPlaying.classList.toggle("hidden", !speaking);
-      iconIdle.classList.toggle("hidden", speaking);
-      statusText.innerText = speaking ? "إيقاف القراءة" : "الاستماع للشرح";
-      if (btn) btn.classList.toggle("is-speaking", speaking);
-    }
-  }
-
-  function stopSpeaking() {
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-    isSpeakingNow = false;
-    updateSpeechUI(false);
-  }
-
-  function speakCardContent(item, force) {
-    if (!("speechSynthesis" in window)) return;
-    if (!isSpeechEnabled && !force) return;
-
-    stopSpeaking();
-    if (!item) return;
-
-    let textToRead = `${item.name || ""}. `;
-    if (item.functionDesc) textToRead += `الوظيفة والأهمية التشريحية: ${item.functionDesc}. `;
-    if (item.examNote) textToRead += `التلميح الامتحاني: ${item.examNote}.`;
-
-    const cleanText = cleanTextForSpeech(textToRead);
-    if (!cleanText) return;
-
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = "ar-SA";
-    utterance.rate = 0.96;
-    utterance.pitch = 1.0;
-
-    const voices = window.speechSynthesis.getVoices();
-    const arabicVoice = voices.find((v) => v.lang && (v.lang.startsWith("ar") || v.lang.toLowerCase().includes("arab")));
-    if (arabicVoice) utterance.voice = arabicVoice;
-
-    utterance.onstart = () => {
-      isSpeakingNow = true;
-      updateSpeechUI(true);
-    };
-    utterance.onend = () => {
-      isSpeakingNow = false;
-      updateSpeechUI(false);
-    };
-    utterance.onerror = () => {
-      isSpeakingNow = false;
-      updateSpeechUI(false);
-    };
-
-    window.speechSynthesis.speak(utterance);
-  }
-
+  // --- دوال الربط بمشغل الصوت العصري المتطور (Neural Biology Player) ---
   function toggleCardSpeech() {
-    if (isSpeakingNow) {
-      stopSpeaking();
-    } else if (currentSelectedItem) {
-      speakCardContent(currentSelectedItem, true);
+    if (window.BioNeuralPlayer) {
+      window.BioNeuralPlayer.togglePlay();
     }
   }
   window.toggleCardSpeech = toggleCardSpeech;
 
   function toggleAutoSpeech() {
-    isSpeechEnabled = !isSpeechEnabled;
-    const autoBtn = document.getElementById("btn-auto-speech");
-    if (autoBtn) {
-      autoBtn.classList.toggle("text-sky-300", isSpeechEnabled);
-      autoBtn.classList.toggle("border-sky-500/40", isSpeechEnabled);
-      autoBtn.classList.toggle("text-slate-500", !isSpeechEnabled);
-      autoBtn.innerText = isSpeechEnabled ? "قراءة تلقائية: مفعلة" : "قراءة تلقائية: متوقفة";
+    if (window.BioNeuralPlayer) {
+      window.BioNeuralPlayer.toggleAutoSpeech();
     }
-    if (!isSpeechEnabled) stopSpeaking();
   }
   window.toggleAutoSpeech = toggleAutoSpeech;
 
-  if ("speechSynthesis" in window) {
-    window.speechSynthesis.onvoiceschanged = () => {
-      window.speechSynthesis.getVoices();
-    };
-  }
-
   // --- العزل وإعادة الضبط وتركيز الكاميرا ---
   function resetSceneAndIsolation(resetCameraFlag = true) {
-    stopSpeaking();
+    if (window.BioNeuralPlayer) {
+      window.BioNeuralPlayer.stop();
+    }
     resetAllMaterials();
     currentSelectedItem = null;
     currentSelectedMeta = { sectionName: "", systemName: "" };
@@ -1875,7 +1828,9 @@
   window.resetSceneAndIsolation = resetSceneAndIsolation;
 
   function closeInfoCard() {
-    stopSpeaking();
+    if (window.BioNeuralPlayer) {
+      window.BioNeuralPlayer.stop();
+    }
     const itemInfoCard = document.getElementById("item-info-card");
     if (itemInfoCard) itemInfoCard.classList.add("hidden");
     resetAllMaterials();
@@ -2007,9 +1962,22 @@
   });
 
   function findItemByMesh(mesh) {
-    if (!mesh || !mesh.name) return null;
-    const normMesh = mesh.userData.normName || normalizeMeshLookupKey(mesh.name);
+    if (!mesh) return null;
 
+    // 1. استخدام سجل التشريح الموحد ونظام التعرف والربط الذكي
+    if (window.ANATOMICAL_REGISTRY) {
+      const resolved = window.ANATOMICAL_REGISTRY.resolveMeshAnatomy(mesh, activeSystem);
+      if (resolved && resolved.item) {
+        return {
+          item: resolved.item,
+          section: { name: resolved.sectionName },
+          system: { name: resolved.systemName }
+        };
+      }
+    }
+
+    // 2. مطابقة احتياطية على منهج الأحياء الأساسي
+    const normMesh = mesh.userData.normName || normalizeMeshLookupKey(mesh.name || "");
     const systems =
       activeSystem === "integrated"
         ? [ACADEMIC_CURRICULUM.skeletal, ACADEMIC_CURRICULUM.muscular, ACADEMIC_CURRICULUM.nervous]
@@ -2070,31 +2038,9 @@
     if (intersects.length > 0) {
       const hitMesh = intersects[0].object;
       const match = findItemByMesh(hitMesh);
-      if (match) {
+      if (match && match.item) {
         const selectedObj = Object.assign({}, match.item, { exactMeshes: [hitMesh] });
         selectItem(selectedObj, match.section.name, match.system.name, true);
-      } else {
-        const rawName = (hitMesh.name || "عنصر تشريحي منفرد").replace(/[_\.]/g, " ");
-        const meshSys = hitMesh.userData.system || (activeSystem === "integrated" ? "skeletal" : activeSystem);
-        const stableDynamicId = hitMesh.name
-          ? "mesh_" + meshSys + "_" + normalizeMeshLookupKey(hitMesh.name)
-          : "dynamic_" + hitMesh.uuid.slice(0, 8);
-        selectItem(
-          {
-            id: stableDynamicId,
-            name: rawName,
-            count: 1,
-            system: meshSys,
-            isDynamicMesh: true,
-            exactNames: hitMesh.name ? [hitMesh.name] : [],
-            exactMeshes: [hitMesh],
-            functionDesc: "عنصر تشريحي دقيق محدد مباشرة من المجسم الواقعي ثلاثي الأبعاد.",
-            examNote: "استخدم أدوات العزل أو الدوران لفحص علاقته التشريحية بالعناصر المجاورة."
-          },
-          "تحديد تشريحي مباشر",
-          SYSTEM_LABELS_AR[meshSys] || "الأطلس التشريحي",
-          true
-        );
       }
     }
   }
@@ -2129,7 +2075,7 @@
       const hitMesh = intersects[0].object;
       const match = findItemByMesh(hitMesh);
       renderer.domElement.style.cursor = "pointer";
-      const label = match ? match.item.name : (hitMesh.name || "").replace(/_/g, " ");
+      const label = match && match.item ? match.item.name : "";
       if (label) {
         showFloatingTooltip(label, e.clientX, e.clientY);
         return;
@@ -2504,7 +2450,129 @@
     }
   }
 
-  // --- 14. التجاوب وحلقة العرض الرئيسية (Render Loop) ---
+  // --- 14. الموسوعة التشريحية الشاملة للأجهزة الحيوية ---
+  let activeEncyclopediaSys = "circulatory";
+
+  function openSystemsEncyclopedia(sysKey) {
+    const modal = document.getElementById("systems-encyclopedia-modal");
+    if (modal) modal.classList.remove("hidden");
+    showEncyclopediaSystem(sysKey || activeEncyclopediaSys || "circulatory");
+  }
+  window.openSystemsEncyclopedia = openSystemsEncyclopedia;
+
+  function closeSystemsEncyclopedia() {
+    const modal = document.getElementById("systems-encyclopedia-modal");
+    if (modal) modal.classList.add("hidden");
+  }
+  window.closeSystemsEncyclopedia = closeSystemsEncyclopedia;
+
+  function showEncyclopediaSystem(sysKey) {
+    activeEncyclopediaSys = sysKey;
+    document.querySelectorAll(".encyclopedia-sys-tab").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.getAttribute("data-encyclopedia-sys") === sysKey);
+    });
+
+    const content = document.getElementById("systems-encyclopedia-content");
+    if (!content) return;
+
+    const sysData = window.SYSTEMS_ENCYCLOPEDIA && window.SYSTEMS_ENCYCLOPEDIA[sysKey];
+    if (!sysData) {
+      content.innerHTML = `<div class="p-4 text-center text-slate-400">لا تتوفر بيانات لهذا الجهاز حالياً.</div>`;
+      return;
+    }
+
+    let html = `<div class="space-y-4">`;
+    html += `
+      <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+        <div>
+          <h4 class="text-sm sm:text-base font-extrabold text-white">${sysData.name}</h4>
+          <p class="text-[11px] text-slate-300">يحتوي هذا القسم على تفاصيل ودراسة ${sysData.organs.length} أعضاء وتراكيب حيوية رئيسية</p>
+        </div>
+        <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold" style="background: ${sysData.accent}20; color: ${sysData.accent}; border: 1px solid ${sysData.accent}40">${sysData.organs.length} أعضاء</span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+    `;
+
+    sysData.organs.forEach((organ) => {
+      html += `
+        <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/40 transition-all space-y-2.5 shadow-md flex flex-col justify-between">
+          <div class="space-y-2">
+            <div class="flex items-start justify-between gap-2 border-b border-slate-800/80 pb-2">
+              <div>
+                <h5 class="text-xs sm:text-sm font-extrabold text-white">${organ.name}</h5>
+                <span class="text-[11px] font-mono text-emerald-300">${organ.englishName}</span>
+              </div>
+              <button type="button" onclick="speakEncyclopediaOrgan('${organ.id}')" data-tip="استماع للشرح الصوتي الطبيعي" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 text-[11px] font-bold flex items-center gap-1 shrink-0 transition-all">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072M11 5L6 9H2v6h4l5 4V5z" />
+                </svg>
+                <span>استماع</span>
+              </button>
+            </div>
+
+            <div class="text-[11px] space-y-1.5 text-slate-300">
+              <div><span class="font-bold text-slate-400">الموقع: </span>${organ.location}</div>
+              <div><span class="font-bold text-slate-400">التصنيف: </span>${organ.classification}</div>
+              <div><span class="font-bold text-sky-300">التركيب والمعالم: </span>${organ.structure} ${organ.landmarks ? "• " + organ.landmarks : ""}</div>
+              <div><span class="font-bold text-emerald-300">الوظائف الحيوية: </span>${organ.primaryFunction} ${organ.secondaryFunction ? organ.secondaryFunction : ""}</div>
+              <div><span class="font-bold text-indigo-300">العلاقات والاتصالات: </span>${organ.relations}</div>
+            </div>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-amber-950/25 border border-amber-500/30 text-[11px] text-amber-100">
+            <span class="font-bold text-amber-300 block mb-0.5">التلميح الامتحاني (ثانوية عامة):</span>
+            ${organ.examNote}
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div></div>`;
+    content.innerHTML = html;
+  }
+  window.showEncyclopediaSystem = showEncyclopediaSystem;
+
+  function speakEncyclopediaOrgan(organId) {
+    if (!window.BioNeuralPlayer || !window.SYSTEMS_ENCYCLOPEDIA) return;
+    for (const sysKey in window.SYSTEMS_ENCYCLOPEDIA) {
+      const sys = window.SYSTEMS_ENCYCLOPEDIA[sysKey];
+      const found = sys.organs.find(o => o.id === organId);
+      if (found) {
+        const audioItem = {
+          id: found.id,
+          name: `${found.name} (${found.englishName})`,
+          system: sysKey,
+          count: 1,
+          functionDesc: `${found.classification}. الموقع: ${found.location}. الوظيفة: ${found.primaryFunction}. المعالم: ${found.landmarks}`,
+          examNote: found.examNote
+        };
+        window.BioNeuralPlayer.loadItem(audioItem, sys.name, "موسوعة الأجهزة الحيوية", true);
+        showAudioToast(`جاري تشغيل الشرح: ${found.name}`, "info");
+        break;
+      }
+    }
+  }
+  window.speakEncyclopediaOrgan = speakEncyclopediaOrgan;
+
+  function runAnatomicalMappingAuditUI() {
+    window.allMeshesBySystem = allMeshesBySystem;
+    if (window.ANATOMICAL_REGISTRY && window.ANATOMICAL_REGISTRY.runAnatomicalMappingAudit) {
+      const res = window.ANATOMICAL_REGISTRY.runAnatomicalMappingAudit();
+      const msg = `تم فحص وتدقيق ${res.grandTotal} مجسماً تشريحياً بنسبة نجاح ${res.successRate}! (راجع Console)`;
+      setInteractionStatus(msg, "active");
+      const toast = document.getElementById("audio-toast");
+      if (toast) {
+        toast.innerText = msg;
+        toast.className = "fixed bottom-16 left-1/2 -translate-x-1/2 z-50 px-3.5 py-1.5 rounded-xl med-glass-strong text-xs font-bold text-emerald-300 border border-emerald-400/40 transition-all shadow-xl pointer-events-none";
+        toast.classList.remove("hidden");
+        setTimeout(() => toast.classList.add("hidden"), 3000);
+      }
+    }
+  }
+  window.runAnatomicalMappingAuditUI = runAnatomicalMappingAuditUI;
+  window.allMeshesBySystem = allMeshesBySystem;
+
+  // --- 15. التجاوب وحلقة العرض الرئيسية (Render Loop) ---
   window.addEventListener("resize", () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
