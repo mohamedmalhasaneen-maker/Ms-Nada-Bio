@@ -761,13 +761,17 @@ app.post('/api/tts', async (req: Request, res: Response): Promise<void> => {
     const statusCode = isQuota ? 429 : 500;
     logAudioError('gemini-3.8-flash-lite-tts', isQuota ? 'QUOTA_EXCEEDED' : 'TTS_GENERATION_FAILED', statusCode, err?.message || 'TTS generation failed');
 
-    console.error('Error generating Neural TTS:', err?.message || err);
+    if (isQuota) {
+      console.warn('[Audio Server] Gemini TTS quota reached (429). Pre-cached and human audio recordings remain available.');
+    } else {
+      console.error('Error generating Neural TTS:', err?.message || err);
+    }
 
     res.status(statusCode).json({
       success: false,
       error: isQuota ? 'QUOTA_EXCEEDED' : 'TTS_GENERATION_FAILED',
       message: isQuota
-        ? 'تم استنفاد حصة التوليد المجانية اليومية (429). يمكنك تصفح البطاقات أو الاستماع للتسجيلات المحفوظة.'
+        ? 'تم استنفاد حصة التوليد اليومية (429). يمكنك استماع الشرح المسجل مقدماً أو رفع التسجيلات البشرية.'
         : (err?.message || 'فشل توليد الشرح الصوتي.'),
       quotaExceeded: isQuota
     });

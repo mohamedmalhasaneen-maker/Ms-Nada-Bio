@@ -90,6 +90,13 @@
     }
   }
 
+  function seekToPercent(pct) {
+    const audio = state.audioElement;
+    if (!audio || !audio.duration) return;
+    const clampedPct = Math.max(0, Math.min(100, pct));
+    audio.currentTime = (clampedPct / 100) * audio.duration;
+  }
+
   function formatTime(sec) {
     if (isNaN(sec) || sec < 0) return '0:00';
     const m = Math.floor(sec / 60);
@@ -657,6 +664,7 @@
     nextSegment,
     prevSegment,
     jumpToSegment,
+    seek: seekToPercent,
     setSpeed,
     setVolume,
     toggleMute,

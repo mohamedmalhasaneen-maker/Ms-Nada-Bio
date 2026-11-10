@@ -486,7 +486,14 @@
         const s = elapsedSec % 60;
         timerDisplay.innerText = `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
       }
-    }, (errMsg) => alert(errMsg));
+    }, (errMsg) => {
+      alert(errMsg);
+      const fileInput = document.getElementById('studio-audio-file-input');
+      if (fileInput) {
+        fileInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        fileInput.focus();
+      }
+    });
 
     if (ok) {
       activeRecordingState.isRecording = true;

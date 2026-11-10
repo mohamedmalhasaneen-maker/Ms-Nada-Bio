@@ -60,6 +60,11 @@
 
   // 2. بدء التسجيل المباشر بالميكروفون داخل الاستوديو
   async function startLiveMicrophoneRecording(onTimerTick, onError) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (onError) onError('المتصفح لا يدعم التسجيل المباشر بالميكروفون. يرجى استخدام رفع ملف صوتي جاهز.');
+      return false;
+    }
+
     try {
       audioChunks = [];
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -80,7 +85,7 @@
       ];
       let selectedMime = 'audio/webm';
       for (const m of mimeTypes) {
-        if (MediaRecorder.isTypeSupported(m)) {
+        if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) {
           selectedMime = m;
           break;
         }
@@ -105,8 +110,12 @@
       mediaRecorder.start(250); // تجميع كل 250ms
       return true;
     } catch (err) {
-      console.error('Microphone access error:', err);
-      if (onError) onError('تعذر الوصول إلى الميكروفون. يرجى التأكد من منح الصلاحية.');
+      console.warn('Microphone permission or hardware access notice:', err?.name || err?.message || err);
+      const isDenied = err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError' || err?.name === 'SecurityError';
+      const msg = isDenied
+        ? 'تم رفض صلاحية الميكروفون في المتصفح. يمكنك رفع ملف صوتی (MP3/WAV) مباشرة بدلاً من التسجيل المباشر.'
+        : 'تعذر الوصول إلى الميكروفون. يرجى استخدام رفع ملف صوتي جاهز بالأسفل.';
+      if (onError) onError(msg);
       return false;
     }
   }
