@@ -375,6 +375,13 @@
         <span class="hidden sm:inline">موسوعة الأجهزة</span>
       </button>
 
+      <button type="button" id="btn-open-audio-library" onclick="window.BioAudioLibraryRegistry && window.BioAudioLibraryRegistry.openAudioLibraryModal()" data-tip="لوحة تحكم المكتبة الصوتية الشاملة وحالة التسجيلات" class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/35 text-sky-300 text-xs font-bold min-h-[38px] transition-all">
+        <svg class="w-4 h-4 text-sky-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
+        </svg>
+        <span class="hidden xl:inline">المكتبة الصوتية 🎙️</span>
+      </button>
+
       <button type="button" id="btn-toggle-sidebar" onclick="toggleSidebar()" data-tip="فتح/إغلاق فهرس المحتوى المنهجي" class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg viewer-ctrl-btn text-xs font-bold min-h-[38px]">
         <svg class="w-4 h-4 text-sky-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10" />
@@ -1001,6 +1008,24 @@
                 قراءة تلقائية: متوقفة
               </button>
             </div>
+
+            <!-- أدوات المطور واختبار محرك الصوت -->
+            <div class="flex items-center gap-1.5 pt-1.5 border-t border-slate-800">
+              <button
+                type="button"
+                onclick="window.testAudioEngine && window.testAudioEngine()"
+                class="flex-1 py-1 px-2 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold hover:bg-emerald-500/25 transition-all text-center"
+              >
+                اختبار محرك الصوت
+              </button>
+              <button
+                type="button"
+                onclick="window.viewAudioLogs && window.viewAudioLogs()"
+                class="flex-1 py-1 px-2 rounded-lg bg-sky-500/15 border border-sky-500/40 text-sky-300 text-[10px] font-bold hover:bg-sky-500/25 transition-all text-center"
+              >
+                سجل الأخطاء
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1350,7 +1375,9 @@
   <script src="/js/anatomical-registry.js"></script>
   <script src="/js/bone-studio.js"></script>
   <script src="/js/audio-dictionary.js"></script>
+  <script src="/js/human-audio-engine.js"></script>
   <script src="/js/neural-audio-player.js"></script>
+  <script src="/js/audio-library-registry.js"></script>
   <script src="/js/atlas-engine.js"></script>
 </body>
 </html>

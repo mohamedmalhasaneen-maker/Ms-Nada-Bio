@@ -371,115 +371,119 @@
     return text;
   }
 
-  // 4. تقسيم المحتوى التشريحي إلى الأقسام الأربعة المطلوبة بدقة (الاسم، البيان والوظيفة، المعالم والتراكيب، أسرار الامتحان)
+  // 4. تقسيم النصوص الطويلة ذكياً لمنع القطع وضمان اكتمال الجمل
+  function splitTextIntoChunks(text, maxLen) {
+    if (!text || typeof text !== 'string') return [];
+    const limit = maxLen || 180;
+
+    const rawSentences = text.split(/[.!\n؟]+/);
+    const result = [];
+
+    for (let i = 0; i < rawSentences.length; i++) {
+      let sentence = rawSentences[i].trim();
+      if (!sentence) continue;
+
+      if (sentence.length <= limit) {
+        result.push(sentence);
+      } else {
+        const clauses = sentence.split(/[،؛]+/);
+        let currentChunk = '';
+
+        for (let j = 0; j < clauses.length; j++) {
+          let clause = clauses[j].trim();
+          if (!clause) continue;
+
+          if ((currentChunk + ' ' + clause).trim().length <= limit) {
+            currentChunk = (currentChunk + ' ' + clause).trim();
+          } else {
+            if (currentChunk) {
+              result.push(currentChunk);
+              currentChunk = '';
+            }
+            if (clause.length <= limit) {
+              currentChunk = clause;
+            } else {
+              const words = clause.split(/\s+/);
+              let wordChunk = '';
+              for (let k = 0; k < words.length; k++) {
+                let w = words[k];
+                if ((wordChunk + ' ' + w).trim().length <= limit) {
+                  wordChunk = (wordChunk + ' ' + w).trim();
+                } else {
+                  if (wordChunk) result.push(wordChunk);
+                  wordChunk = w;
+                }
+              }
+              if (wordChunk) currentChunk = wordChunk;
+            }
+          }
+        }
+        if (currentChunk) result.push(currentChunk);
+      }
+    }
+    return result;
+  }
+
+  // 5. تقسيم المحتوى التشريحي إلى الأقسام الأربعة المطلوبة بدقة (الاسم، البيان والوظيفة، المعالم والتراكيب، أسرار الامتحان)
   function parseAnatomicalSentences(item) {
     if (!item) return [];
 
     const segments = [];
 
-    // 1. اسم العضو المحدد (الاسم العربي أولاً)
-    const nameSpoken = `${item.name || 'عنصر تشريحي'}.`;
-    segments.push({
-      id: 'name',
-      type: 'header',
-      label: 'الاسم',
-      rawText: item.name || 'عنصر تشريحي',
-      spokenText: preparePhoneticAnatomicalText(nameSpoken)
-    });
+    function addSectionChunks(rawText, type, label) {
+      if (!rawText || typeof rawText !== 'string') return;
+      const trimmed = rawText.trim();
+      if (!trimmed) return;
 
-    // 2. البيان والوظيفة (جميع النقاط والفقرات الموجودة في هذا القسم دون عناوين فرعية)
-    if (item.functionDesc && item.functionDesc.trim()) {
-      const funcRaw = item.functionDesc.trim();
-      const sentences = funcRaw
-        .split(/[.؛!؟\n]+/)
-        .map((s) => s.trim())
-        .filter((s) => s.length > 4);
-
-      if (sentences.length > 0) {
-        sentences.forEach((s) => {
+      const chunks = splitTextIntoChunks(trimmed, 180);
+      chunks.forEach((chunk) => {
+        const spoken = preparePhoneticAnatomicalText(chunk);
+        if (spoken && spoken.trim()) {
           segments.push({
-            id: `func_${segments.length}`,
-            type: 'function',
-            label: 'البيان والوظيفة',
-            rawText: s,
-            spokenText: preparePhoneticAnatomicalText(s)
+            id: `${type}_${segments.length}`,
+            type: type, // 'name' | 'overview' | 'landmarks' | 'exam'
+            label: label,
+            rawText: chunk,
+            spokenText: spoken
           });
-        });
-      } else {
-        segments.push({
-          id: `func_${segments.length}`,
-          type: 'function',
-          label: 'البيان والوظيفة',
-          rawText: funcRaw,
-          spokenText: preparePhoneticAnatomicalText(funcRaw)
-        });
-      }
+        }
+      });
     }
 
-    // 3. المعالم والتراكيب (أو المنشأ والارتكاز والتعصيب)
-    let landmarksText = '';
-    if (item.origin && item.insertion) {
-      landmarksText = `تنشأ العضلة من ${item.origin}، وترتكز في ${item.insertion}.${item.innervation ? ` العصب المغذي هو ${item.innervation}.` : ''}`;
-    } else if (item.landmarks && item.landmarks.trim()) {
-      landmarksText = item.landmarks.trim();
-    } else if (item.structure && item.structure.trim()) {
-      landmarksText = item.structure.trim();
+    // 1. الاسم باللغة العربية (Clean Arabic Name)
+    const rawName = (item.name || '').replace(/\s*\([A-Za-z\s,\.\-&/0-9]+\)/g, '').trim() || 'عنصر تشريحي';
+    addSectionChunks(rawName + '.', 'name', 'الاسم');
+
+    // 2. قسم البيان والوظيفة بالكامل (Overview & Function)
+    const overviewParts = [];
+    if (item.classification) overviewParts.push(`التصنيف التشريحي: ${item.classification}.`);
+    if (item.location) overviewParts.push(`الموقع: ${item.location}.`);
+    if (item.functionDesc) overviewParts.push(item.functionDesc);
+    if (item.role && !item.functionDesc) overviewParts.push(`الوظيفة الحيوية: ${item.role}.`);
+    if (overviewParts.length > 0) {
+      addSectionChunks(overviewParts.join(' '), 'overview', 'البيان والوظيفة');
     }
 
-    if (landmarksText) {
-      const landSentences = landmarksText
-        .split(/[.؛!؟\n]+/)
-        .map((s) => s.trim())
-        .filter((s) => s.length > 4);
-
-      if (landSentences.length > 0) {
-        landSentences.forEach((s) => {
-          segments.push({
-            id: `landmarks_${segments.length}`,
-            type: 'landmarks',
-            label: 'المعالم والتراكيب',
-            rawText: s,
-            spokenText: preparePhoneticAnatomicalText(s)
-          });
-        });
-      } else {
-        segments.push({
-          id: `landmarks_${segments.length}`,
-          type: 'landmarks',
-          label: 'المعالم والتراكيب',
-          rawText: landmarksText,
-          spokenText: preparePhoneticAnatomicalText(landmarksText)
-        });
-      }
+    // 3. قسم المعالم والتراكيب بالكامل (Landmarks & Structures)
+    const landmarksParts = [];
+    if (item.landmarks) landmarksParts.push(`المعالم التشريحية: ${item.landmarks}.`);
+    if (item.structure) landmarksParts.push(`التركيب الدقيق: ${item.structure}.`);
+    if (item.articulations) landmarksParts.push(`التأثير والتمفصل: ${item.articulations}.`);
+    if (item.origin) landmarksParts.push(`منشأ العضلة: ${item.origin}.`);
+    if (item.insertion) landmarksParts.push(`ارتكاز العضلة: ${item.insertion}.`);
+    if (item.action) landmarksParts.push(`الحركة والعمل: ${item.action}.`);
+    if (item.innervation) landmarksParts.push(`التعصيب العصبي: ${item.innervation}.`);
+    if (item.muscleAttachments) landmarksParts.push(`العضلات المتصلة: ${item.muscleAttachments}.`);
+    if (landmarksParts.length > 0) {
+      addSectionChunks(landmarksParts.join(' '), 'landmarks', 'المعالم والتراكيب');
     }
 
-    // 4. أسرار الامتحان (جميع النقاط الموجودة في هذا القسم)
-    if (item.examNote && item.examNote.trim()) {
-      const examRaw = item.examNote.trim();
-      const examSentences = examRaw
-        .split(/[.؛!؟\n]+/)
-        .map((s) => s.trim())
-        .filter((s) => s.length > 4);
-
-      if (examSentences.length > 0) {
-        examSentences.forEach((s) => {
-          segments.push({
-            id: `exam_${segments.length}`,
-            type: 'exam',
-            label: 'أسرار الامتحان',
-            rawText: s,
-            spokenText: preparePhoneticAnatomicalText(s)
-          });
-        });
-      } else {
-        segments.push({
-          id: `exam_${segments.length}`,
-          type: 'exam',
-          label: 'أسرار الامتحان',
-          rawText: examRaw,
-          spokenText: preparePhoneticAnatomicalText(examRaw)
-        });
-      }
+    // 4. قسم أسرار الامتحان بالكامل (Exam Secrets & Curriculum)
+    const examParts = [];
+    if (item.curriculumImportance) examParts.push(`الأهمية المنهجية: ${item.curriculumImportance}.`);
+    if (item.examNote) examParts.push(item.examNote);
+    if (examParts.length > 0) {
+      addSectionChunks(examParts.join(' '), 'exam', 'أسرار الامتحان');
     }
 
     return segments;
@@ -488,6 +492,7 @@
   window.BioAudioDictionary = {
     preparePhoneticAnatomicalText: preparePhoneticAnatomicalText,
     parseAnatomicalSentences: parseAnatomicalSentences,
-    normalizeAbbreviationsAndNumbers: normalizeAbbreviationsAndNumbers
+    normalizeAbbreviationsAndNumbers: normalizeAbbreviationsAndNumbers,
+    splitTextIntoChunks: splitTextIntoChunks
   };
 })();

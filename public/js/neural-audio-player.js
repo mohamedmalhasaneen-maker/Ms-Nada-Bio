@@ -1,26 +1,14 @@
 // =========================================================================
-// مشغل الصوت العصري المتطور (Neural Biology Audio Player)
-// محرك فائق السرعة، تخزين مؤقت ذكي، تشغيل متسلسل بدون تقطيع، وتحكم احترافي
+// مشغل الشرح الصوتي البشري العصري (Human & Neural Audio Player)
+// أولوية للتسجيلات البشرية الحقيقية (مس / ندى بدوي)، تشغيل سلس، وبدون تقطيع
 // =========================================================================
 (function () {
   'use strict';
 
-  // 1. إدارة التخزين المؤقت للمقاطع الصوتية المتولدة لمنع تكرار الطلبات وتسرب الذاكرة
-  const MAX_BLOB_CACHE = 250;
-  const audioBlobCache = new Map(); // key -> blobUrl
-  const inFlightFetches = new Map(); // key -> Promise<string>
-  let serverFallbackActiveUntil = 0;
-  let cachedBrowserVoices = [];
-
-  function updateBrowserVoices() {
-    if ('speechSynthesis' in window) {
-      cachedBrowserVoices = window.speechSynthesis.getVoices() || [];
-    }
-  }
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    updateBrowserVoices();
-    window.speechSynthesis.onvoiceschanged = updateBrowserVoices;
-  }
+  // إدارة التخزين المؤقت للمقاطع الصوتية
+  const MAX_BLOB_CACHE = 300;
+  const audioBlobCache = new Map();
+  const inFlightFetches = new Map();
 
   function evictOldestBlobIfFull() {
     if (audioBlobCache.size >= MAX_BLOB_CACHE) {
@@ -37,18 +25,17 @@
     }
   }
 
-  // مفتاح التخزين المؤقت المستقل عن السرعة (لأن السرعة يتم التحكم بها في المتصفح عبر playbackRate)
   function getCacheKey(text, voiceId) {
     return `${voiceId || 'Kore'}_${(text || '').trim()}`;
   }
 
-  // استرجاع تفضيلات الطالب المحفوظة محلياً
+  // استرجاع التفضيلات
   const savedSpeed = parseFloat(localStorage.getItem('bio_speed_pref') || '1.10');
   const validSpeed = !isNaN(savedSpeed) && savedSpeed >= 0.75 && savedSpeed <= 1.6 ? savedSpeed : 1.10;
   const savedVol = parseFloat(localStorage.getItem('bio_vol_pref') || '1.0');
   const validVol = !isNaN(savedVol) && savedVol >= 0 && savedVol <= 1 ? savedVol : 1.0;
 
-  // إعدادات المشغل والحالة التشغيلية
+  // إعدادات المشغل والحالة
   const state = {
     currentItem: null,
     currentMeta: { sectionName: '', systemName: '' },
@@ -57,22 +44,20 @@
     isPlaying: false,
     isPaused: false,
     isLoading: false,
-    speed: validSpeed, // سرعة افتراضية ممتازة 1.10x
+    speed: validSpeed,
     volume: validVol,
     isMuted: false,
     voiceId: localStorage.getItem('bio_voice_pref') || 'Kore',
-    audioEngine: 'neural', // 'neural' | 'browser_fallback'
+    audioEngine: 'human', // 'human' | 'neural'
+    speakerName: 'مس / ندى بدوي (شرح بشري مصري)',
     audioElement: null,
-    preloadedNextAudio: null,
-    nextPreloadedIndex: -1,
     pauseTimeout: null,
-    prewarmQueue: [],
     isAutoPlayEnabled: false,
-    sessionId: 0 // لتتبع الجلسات وإلغاء الطلبات القديمة فوراً
+    sessionId: 0
   };
 
-  // تهيئة عناصر الصوت مع التحميل المسبق المزدوج لمنع أي فراغ زمني
-  function initAudioElements() {
+  // تهيئة عنصر الصوت الرئيسي
+  function initAudioElement() {
     if (!state.audioElement) {
       state.audioElement = new Audio();
       state.audioElement.preload = 'auto';
@@ -82,68 +67,68 @@
       state.audioElement.addEventListener('pause', () => {
         if (!state.isLoading) updateVisualizer(false);
       });
-    }
-
-    if (!state.preloadedNextAudio) {
-      state.preloadedNextAudio = new Audio();
-      state.preloadedNextAudio.preload = 'auto';
+      state.audioElement.addEventListener('timeupdate', onTimeUpdate);
     }
   }
 
-  // جلب المقطع الصوتي من السيرفر أو الكاش مع منع تكرار الطلبات المتزامنة
-  async function fetchNeuralAudioWithRetry(text, voiceId, retries = 1) {
+  function onTimeUpdate() {
+    const audio = state.audioElement;
+    if (!audio || !audio.duration) return;
+    const progressFill = document.getElementById('audio-progress-fill');
+    const timeCurrent = document.getElementById('audio-time-current');
+    const timeTotal = document.getElementById('audio-time-total');
+
+    if (progressFill) {
+      const pct = (audio.currentTime / audio.duration) * 100;
+      progressFill.style.width = `${pct}%`;
+    }
+    if (timeCurrent) {
+      timeCurrent.innerText = formatTime(audio.currentTime);
+    }
+    if (timeTotal) {
+      timeTotal.innerText = formatTime(audio.duration);
+    }
+  }
+
+  function formatTime(sec) {
+    if (isNaN(sec) || sec < 0) return '0:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  }
+
+  // جلب الصوت التوليدي في حالة عدم وجود تسجيل بشري لهذا العضو
+  async function fetchNeuralAudioWithRetry(text, voiceId, retries = 2) {
     const key = getCacheKey(text, voiceId);
-
-    // 1. فحص الكاش الفوري
-    if (audioBlobCache.has(key)) {
-      return audioBlobCache.get(key);
-    }
-
-    // فحص ما إذا كان السيرفر في وضع التحويل التلقائي المؤقت (مثل انتهاء الحصة) لتفادي انتظار الطلبات
-    if (Date.now() < serverFallbackActiveUntil) {
-      throw new Error('SERVER_FALLBACK_ACTIVE');
-    }
-
-    // 2. إذا كان هناك طلب جارٍ لنفس النص، انتظر نفس الـ Promise ولا ترسل طلباً مكرراً
-    if (inFlightFetches.has(key)) {
-      return inFlightFetches.get(key);
-    }
+    if (audioBlobCache.has(key)) return audioBlobCache.get(key);
+    if (inFlightFetches.has(key)) return inFlightFetches.get(key);
 
     const fetchPromise = (async () => {
       let lastErr = null;
       for (let attempt = 0; attempt <= retries; attempt++) {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const timeoutId = setTimeout(() => controller.abort(), 12000);
 
           const res = await fetch('/api/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              text: text,
-              voiceName: voiceId || 'Kore'
-            }),
+            body: JSON.stringify({ text, voiceName: voiceId || 'Kore' }),
             signal: controller.signal
           });
           clearTimeout(timeoutId);
 
           if (!res.ok) {
             const errJson = await res.json().catch(() => ({}));
-            const err = new Error(errJson.message || `HTTP ${res.status}`);
-            if (errJson.fallbackToBrowser || res.status === 429 || res.status === 503) {
-              err.fallbackToBrowser = true;
-              serverFallbackActiveUntil = Date.now() + 60000; // تفعيل البديل الفوري لمدة دقيقة لتوفير السرعة القصوى
-              throw err;
-            }
-            throw err;
+            const customErr = new Error(errJson.message || `HTTP ${res.status}`);
+            customErr.statusCode = res.status;
+            customErr.errorType = errJson.error || 'HTTP_ERROR';
+            throw customErr;
           }
 
           const data = await res.json();
-          if (!data.audioBase64) {
-            throw new Error('لم يتم استلام مقطع صوتي.');
-          }
+          if (!data.audioBase64) throw new Error('لم يتم استلام مقطع صوتي.');
 
-          // تحويل Base64 WAV إلى Blob URL سريع
           const byteChars = atob(data.audioBase64);
           const byteNumbers = new Array(byteChars.length);
           for (let i = 0; i < byteChars.length; i++) {
@@ -158,57 +143,22 @@
           return blobUrl;
         } catch (err) {
           lastErr = err;
-          if (err.fallbackToBrowser) {
-            break; // التحويل الفوري دون إضاعة وقت الطالب في إعادة محاولة
-          }
-          if (attempt < retries) {
-            await new Promise((r) => setTimeout(r, 400));
-          }
+          if (err.statusCode === 429 || err.statusCode === 404) break;
+          if (attempt < retries) await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
         }
       }
-      throw lastErr || new Error('فشل جلب الصوت العصبي');
+      throw lastErr || new Error('فشل جلب الشرح الصوتي');
     })();
 
     inFlightFetches.set(key, fetchPromise);
     try {
-      const url = await fetchPromise;
-      return url;
+      return await fetchPromise;
     } finally {
       inFlightFetches.delete(key);
     }
   }
 
-  // التجهيز الصامت والتحميل المسبق في الخلفية لأول مقطع أو مقطع محدد
-  function prewarmSegment(index) {
-    if (index < 0 || index >= state.segments.length) return;
-    const seg = state.segments[index];
-    if (!seg || !seg.spokenText) return;
-
-    const key = getCacheKey(seg.spokenText, state.voiceId);
-    if (!audioBlobCache.has(key) && !inFlightFetches.has(key)) {
-      fetchNeuralAudioWithRetry(seg.spokenText, state.voiceId, 1).catch(() => {
-        // التحميل المسبق في الخلفية صامت ولا يظهر أخطاء للمستخدم
-      });
-    }
-  }
-
-  // التحميل المسبق الذكي للجملة التالية مع التغذية المباشرة في عنصر الصوت الاحتياطي
-  function prefetchNextSegment() {
-    const nextIdx = state.currentSegmentIndex + 1;
-    if (nextIdx < state.segments.length) {
-      const nextSeg = state.segments[nextIdx];
-      fetchNeuralAudioWithRetry(nextSeg.spokenText, state.voiceId, 1)
-        .then((blobUrl) => {
-          if (state.preloadedNextAudio && nextIdx === state.currentSegmentIndex + 1) {
-            state.preloadedNextAudio.src = blobUrl;
-            state.nextPreloadedIndex = nextIdx;
-          }
-        })
-        .catch(() => {});
-    }
-  }
-
-  // تشغيل الجملة الحالية مع انتقال متصل وسريع
+  // تشغيل الجملة/القسم الحالي بسلاسة
   async function playCurrentSegment() {
     clearTimeout(state.pauseTimeout);
 
@@ -219,34 +169,28 @@
 
     const currentSession = ++state.sessionId;
     const segment = state.segments[state.currentSegmentIndex];
+    const itemId = state.currentItem ? state.currentItem.id : '';
+    const sectionKey = segment.type || 'overview';
 
     state.isPlaying = true;
     state.isPaused = false;
 
-    // فحص ما إذا كان المقطع التالي مجهزاً بالفعل مسبقاً في الذاكرة
-    const key = getCacheKey(segment.spokenText, state.voiceId);
-    const isAlreadyCached = audioBlobCache.has(key);
-
-    if (!isAlreadyCached) {
-      state.isLoading = true;
-      updateUI();
+    // 1. الفحص: هل يوجد تسجيل صوتي بشري مسجل ومرفوع لهذا القسم؟
+    let humanRec = null;
+    if (window.BioHumanAudioEngine) {
+      humanRec = window.BioHumanAudioEngine.getHumanRecording(itemId, sectionKey);
     }
 
-    try {
-      const audioUrl = await fetchNeuralAudioWithRetry(segment.spokenText, state.voiceId, 1);
+    initAudioElement();
+    const audio = state.audioElement;
 
-      // التأكد من أن جلسة التشغيل لم تتغير أثناء انتظار الشبكة (مثلاً ضغط المستخدم Stop أو التالي)
-      if (state.sessionId !== currentSession || !state.isPlaying) {
-        return;
-      }
-
-      state.audioEngine = 'neural';
+    if (humanRec) {
+      // تشغيل تسجيل بشري حقيقي!
+      state.audioEngine = 'human';
+      state.speakerName = humanRec.speakerName || 'مس / ندى بدوي (شرح بشري حقيقي)';
       state.isLoading = false;
 
-      initAudioElements();
-      const audio = state.audioElement;
-
-      // إذا كان المقطع قد تم تحميله مسبقاً في عنصر الصوت، نستخدمه فوراً
+      const audioUrl = humanRec.audioUrl || `/api/human-audio/recording/${itemId}/${sectionKey}`;
       if (audio.src !== audioUrl) {
         audio.src = audioUrl;
       }
@@ -254,93 +198,46 @@
       audio.playbackRate = state.speed;
       audio.volume = state.isMuted ? 0 : state.volume;
 
-      await audio.play();
-
-      if (state.sessionId !== currentSession) return;
-      updateUI();
-
-      // تحضير الجملة التالية فور بدء تشغيل الجملة الحالية
-      prefetchNextSegment();
-    } catch (err) {
-      if (state.sessionId !== currentSession || !state.isPlaying) return;
-
-      console.warn('Neural TTS quota or error:', err?.message || err);
-      state.isLoading = false;
-      state.isPlaying = false;
-      updateUI();
-      const isQuota = err?.message?.includes('429') || err?.message?.includes('الحصة') || err?.message?.includes('SERVER_FALLBACK_ACTIVE');
-      const toastMsg = isQuota
-        ? 'تم استنفاد حصة التوليد المجانية اليومية. يمكنك تصفح البطاقات وقراءة المعلومات العلمية مباشرة.'
-        : 'تعذر توليد الشرح الصوتي. يرجى المحاولة لاحقاً.';
-      showAudioToast(toastMsg, 'error');
-    }
-  }
-
-  // بديل المتصفح الموثوق عند انقطاع الإنترنت أو عدم توفر المفتاح
-  function playBrowserFallback(text) {
-    if (!('speechSynthesis' in window)) {
-      state.isLoading = false;
-      state.isPlaying = false;
-      updateUI();
-      showAudioToast('محرك الصوت غير مدعوم في هذا المتصفح', 'error');
+      try {
+        await audio.play();
+        if (state.sessionId !== currentSession) return;
+        updateUI();
+      } catch (err) {
+        console.warn('Human audio play error:', err);
+      }
       return;
     }
 
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ar-EG';
-    utterance.rate = Math.max(0.85, Math.min(1.4, state.speed * 1.02));
-    utterance.pitch = 1.05;
-    utterance.volume = state.isMuted ? 0 : state.volume;
+    // 2. إذا لم يرفع تسجيل بشري، جلب الصوت التوليدي المصري المحفوظ بالذاكرة
+    state.audioEngine = 'neural';
+    state.speakerName = 'مس / ندى بدوي (توليد مصري طبيعي)';
+    state.isLoading = true;
+    updateUI();
 
-    const voices =
-      cachedBrowserVoices && cachedBrowserVoices.length > 0
-        ? cachedBrowserVoices
-        : window.speechSynthesis.getVoices() || [];
+    try {
+      const audioUrl = await fetchNeuralAudioWithRetry(segment.spokenText, state.voiceId, 2);
+      if (state.sessionId !== currentSession || !state.isPlaying) return;
 
-    const egFemaleVoice = voices.find(
-      (v) =>
-        v.lang &&
-        (v.lang === 'ar-EG' || v.lang.startsWith('ar_EG') || v.lang === 'ar') &&
-        (v.name.toLowerCase().includes('female') ||
-          v.name.includes('سلمى') ||
-          v.name.includes('مريم') ||
-          v.name.includes('هدى') ||
-          v.name.toLowerCase().includes('salma') ||
-          v.name.toLowerCase().includes('natural'))
-    );
-    const anyArabic = voices.find((v) => v.lang && (v.lang.startsWith('ar') || v.lang.includes('AR')));
-    const chosen = egFemaleVoice || anyArabic;
-    if (chosen) {
-      utterance.voice = chosen;
-      utterance.lang = chosen.lang || 'ar-EG';
-    }
-
-    utterance.onstart = () => {
       state.isLoading = false;
-      state.isPlaying = true;
-      state.isPaused = false;
-      updateVisualizer(true);
+      if (audio.src !== audioUrl) audio.src = audioUrl;
+
+      audio.playbackRate = state.speed;
+      audio.volume = state.isMuted ? 0 : state.volume;
+
+      await audio.play();
+      if (state.sessionId !== currentSession) return;
       updateUI();
-    };
+    } catch (err) {
+      if (state.sessionId !== currentSession || !state.isPlaying) return;
 
-    utterance.onend = () => {
-      updateVisualizer(false);
-      onSegmentEnded();
-    };
+      state.isLoading = false;
+      state.isPlaying = false;
+      updateUI();
 
-    utterance.onerror = (e) => {
-      updateVisualizer(false);
-      if (e.error !== 'interrupted' && e.error !== 'canceled') {
-        console.warn('Speech synthesis error:', e);
-      }
-      finishPlayback();
-    };
-
-    window.speechSynthesis.speak(utterance);
+      showAudioToast(`🎙️ لم يتم رفع تسجيل بشري لهذا العضو حتى الآن. يمكنك تسجيله في استوديو المطور.`, 'warn');
+    }
   }
 
-  // انتهاء الجملة -> انتقال فوري للجملة التالية مع وقفة بشرية طبيعية مريحة (190ms)
   function onSegmentEnded() {
     if (!state.isPlaying || state.isPaused) return;
 
@@ -348,20 +245,19 @@
       state.currentSegmentIndex++;
       updateUI();
 
-      // وقفة نفسية طبيعية خفيفة بين الجمل (190 مللي ثانية) بدون أي تأخير شبكة
       state.pauseTimeout = setTimeout(() => {
         playCurrentSegment();
-      }, 190);
+      }, 120);
     } else {
       finishPlayback();
     }
   }
 
   function onAudioError(e) {
-    console.warn('Audio playback error, falling back:', e);
-    if (state.isPlaying && state.segments[state.currentSegmentIndex]) {
-      state.audioEngine = 'browser_fallback';
-      playBrowserFallback(state.segments[state.currentSegmentIndex].spokenText);
+    console.warn('Audio element error:', e);
+    if (state.isPlaying) {
+      showAudioToast('تجاوز المقطع الصوتي الحالي...', 'warn');
+      onSegmentEnded();
     }
   }
 
@@ -376,32 +272,27 @@
       state.audioElement.pause();
       state.audioElement.currentTime = 0;
     }
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
     updateUI();
   }
 
-  // =========================================================================
-  // دوال التحكم العامة (Play / Pause / Stop / Next / Prev / Speed / Volume)
-  // =========================================================================
-
+  // التحكم العام
   function loadItem(item, sectionName, systemName, autoStart = false) {
+    if (!item) return;
+
+    if (state.currentItem && state.currentItem.id === item.id && (state.isPlaying || state.isLoading)) {
+      return;
+    }
+
     stop();
     state.currentItem = item;
     state.currentMeta = { sectionName: sectionName || '', systemName: systemName || '' };
     state.segments = window.BioAudioDictionary
-      ? window.BioAudioDictionary.parseAnatomicalSentences(item, sectionName, systemName)
+      ? window.BioAudioDictionary.parseAnatomicalSentences(item)
       : [];
     state.currentSegmentIndex = 0;
 
     renderTranscriptInCard();
     updateUI();
-
-    // التحضير المسبق الصامت لأول جملة في الخلفية بحيث يبدأ الصوت فوراً عند الضغط (0ms تأخير)
-    if (state.segments.length > 0 && !autoStart && !state.isAutoPlayEnabled) {
-      prewarmSegment(0);
-    }
 
     if (autoStart || state.isAutoPlayEnabled) {
       play();
@@ -410,49 +301,31 @@
 
   function play() {
     if (!state.segments.length && state.currentItem) {
-      state.segments = window.BioAudioDictionary.parseAnatomicalSentences(
-        state.currentItem,
-        state.currentMeta.sectionName,
-        state.currentMeta.systemName
-      );
+      state.segments = window.BioAudioDictionary.parseAnatomicalSentences(state.currentItem);
     }
     if (!state.segments.length) return;
 
-    initAudioElements();
+    initAudioElement();
 
-    // استكمال القراءة من موضع الـ Pause بالضبط
     if (state.isPaused) {
       state.isPaused = false;
       state.isPlaying = true;
-      if (state.audioEngine === 'neural' && state.audioElement && state.audioElement.src) {
-        state.audioElement.play().catch(() => {
-          playCurrentSegment();
-        });
+      if (state.audioElement && state.audioElement.src) {
+        state.audioElement.play().catch(() => playCurrentSegment());
         updateUI();
         return;
-      }
-      if (state.audioEngine === 'browser_fallback' && 'speechSynthesis' in window) {
-        if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
-          updateUI();
-          return;
-        }
       }
     }
 
     playCurrentSegment();
   }
 
-  // الإيقاف المؤقت (Pause): يحتفظ بموضع القراءة والجملة الحالية
   function pause() {
     clearTimeout(state.pauseTimeout);
-    state.sessionId++; // إيقاف أي طلب شبكة معلق
+    state.sessionId++;
 
-    if (state.audioElement && state.audioEngine === 'neural') {
+    if (state.audioElement) {
       state.audioElement.pause();
-    }
-    if ('speechSynthesis' in window && state.audioEngine === 'browser_fallback') {
-      window.speechSynthesis.pause();
     }
 
     state.isPaused = true;
@@ -469,17 +342,14 @@
     }
   }
 
-  // الإيقاف النهائي (Stop): ينهي الجلسة بالكامل ويلغي القائمة ويعود للبداية
   function stop() {
     clearTimeout(state.pauseTimeout);
-    state.sessionId++; // إلغاء أي مهام سابقة
+    state.sessionId++;
 
     if (state.audioElement) {
       state.audioElement.pause();
       state.audioElement.currentTime = 0;
-    }
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+      state.audioElement.src = '';
     }
 
     state.isPlaying = false;
@@ -494,9 +364,6 @@
     if (state.audioElement) {
       state.audioElement.pause();
       state.audioElement.currentTime = 0;
-    }
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
     }
     playCurrentSegment();
   }
@@ -530,7 +397,6 @@
     }
   }
 
-  // تغيير سرعة القراءة فورياً أثناء التشغيل دون إعادة توليد الصوت
   function setSpeed(rate) {
     const val = parseFloat(rate);
     if (!isNaN(val) && val >= 0.75 && val <= 1.6) {
@@ -540,12 +406,9 @@
       if (state.audioElement) {
         state.audioElement.playbackRate = val;
       }
-      if (state.preloadedNextAudio) {
-        state.preloadedNextAudio.playbackRate = val;
-      }
 
       updateSpeedButtonsUI();
-      showAudioToast(`سرعة القراءة: ${val.toFixed(2).replace(/\.00$/, '')}x`, 'info');
+      showAudioToast(`سرعة الشرح: ${val.toFixed(2).replace(/\.00$/, '')}x`, 'info');
     }
   }
 
@@ -569,22 +432,6 @@
     updateVolumeUI();
   }
 
-  function setVoice(voiceId) {
-    state.voiceId = voiceId;
-    localStorage.setItem('bio_voice_pref', voiceId);
-    updateVoiceUI();
-    const voiceLabel =
-      voiceId === 'Kore' ? 'مس/ ندى بدوي (شرح مصري طبيعي)' : 'دكتورة أحياء (نبرة هادئة ورسمية)';
-    showAudioToast(`تم اختيار: ${voiceLabel}`, 'info');
-
-    // إعادة تحميل أول مقطع بالصوت الجديد
-    if (state.isPlaying) {
-      replayCurrentSegment();
-    } else {
-      prewarmSegment(state.currentSegmentIndex);
-    }
-  }
-
   function toggleAutoSpeech() {
     state.isAutoPlayEnabled = !state.isAutoPlayEnabled;
     const btn = document.getElementById('btn-auto-speech');
@@ -595,27 +442,24 @@
       btn.innerText = state.isAutoPlayEnabled ? 'قراءة تلقائية: مفعلة' : 'قراءة تلقائية: متوقفة';
     }
     showAudioToast(
-      state.isAutoPlayEnabled
-        ? 'تم تفعيل القراءة التلقائية عند اختيار أي عنصر'
-        : 'تم إيقاف القراءة التلقائية',
+      state.isAutoPlayEnabled ? 'تم تفعيل القراءة التلقائية عند اختيار أي عضو' : 'تم إيقاف القراءة التلقائية',
       'info'
     );
   }
 
-  // تمييز النص التفاعلي (Karaoke Transcript)
   function renderTranscriptInCard() {
     const funcEl = document.getElementById('card-function');
+    const landEl = document.getElementById('card-landmarks-text');
     const examEl = document.getElementById('card-exam-note');
 
     if (funcEl && state.currentItem) {
       funcEl.innerHTML = '';
-      const funcSegments = state.segments.filter((s) => s.type === 'function');
-      if (funcSegments.length > 0) {
-        funcSegments.forEach((seg) => {
+      const overviewSegs = state.segments.filter((s) => s.type === 'overview' || s.type === 'name');
+      if (overviewSegs.length > 0) {
+        overviewSegs.forEach((seg) => {
           const span = document.createElement('span');
           span.id = `transcript-${seg.id}`;
-          span.className =
-            'transcript-sentence cursor-pointer hover:bg-sky-500/15 rounded px-1 transition-all inline';
+          span.className = 'transcript-sentence cursor-pointer hover:bg-sky-500/15 rounded px-1 transition-all inline';
           span.innerText = seg.rawText + ' ';
           span.onclick = () => {
             const idx = state.segments.findIndex((s) => s.id === seg.id);
@@ -624,19 +468,38 @@
           funcEl.appendChild(span);
         });
       } else {
-        funcEl.innerText = state.currentItem.functionDesc || 'الوظيفة الحيوية والتكامل التشريحي وفق منهج الأحياء.';
+        funcEl.innerText = state.currentItem.functionDesc || state.currentItem.role || 'الوظيفة الحيوية والتكامل التشريحي.';
+      }
+    }
+
+    if (landEl && state.currentItem) {
+      landEl.innerHTML = '';
+      const landSegs = state.segments.filter((s) => s.type === 'landmarks');
+      if (landSegs.length > 0) {
+        landSegs.forEach((seg) => {
+          const span = document.createElement('span');
+          span.id = `transcript-${seg.id}`;
+          span.className = 'transcript-sentence cursor-pointer hover:bg-sky-500/15 rounded px-1 transition-all inline';
+          span.innerText = seg.rawText + ' ';
+          span.onclick = () => {
+            const idx = state.segments.findIndex((s) => s.id === seg.id);
+            if (idx !== -1) jumpToSegment(idx);
+          };
+          landEl.appendChild(span);
+        });
+      } else {
+        landEl.innerText = state.currentItem.landmarks || state.currentItem.structure || 'المعالم والتراكيب التشريحية الحيوية.';
       }
     }
 
     if (examEl && state.currentItem) {
       examEl.innerHTML = '';
-      const examSegments = state.segments.filter((s) => s.type === 'exam');
-      if (examSegments.length > 0) {
-        examSegments.forEach((seg) => {
+      const examSegs = state.segments.filter((s) => s.type === 'exam');
+      if (examSegs.length > 0) {
+        examSegs.forEach((seg) => {
           const span = document.createElement('span');
           span.id = `transcript-${seg.id}`;
-          span.className =
-            'transcript-sentence cursor-pointer hover:bg-cyan-500/20 rounded px-1 transition-all inline';
+          span.className = 'transcript-sentence cursor-pointer hover:bg-cyan-500/20 rounded px-1 transition-all inline';
           span.innerText = seg.rawText + ' ';
           span.onclick = () => {
             const idx = state.segments.findIndex((s) => s.id === seg.id);
@@ -645,8 +508,7 @@
           examEl.appendChild(span);
         });
       } else {
-        examEl.innerText =
-          state.currentItem.examNote || 'راجع تفاصيل الاتصال والتمفصل وتنسيق السيالات العصبية في المنهج.';
+        examEl.innerText = state.currentItem.examNote || 'راجع تفاصيل المنهج.';
       }
     }
   }
@@ -663,12 +525,17 @@
         if (activeEl) {
           activeEl.classList.add('active-sentence', 'bg-sky-400/25', 'text-sky-100', 'ring-1', 'ring-sky-400/50');
           activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+          if (window.setCardTab) {
+            if (curSeg.type === 'overview' || curSeg.type === 'name') window.setCardTab('overview');
+            else if (curSeg.type === 'landmarks') window.setCardTab('landmarks');
+            else if (curSeg.type === 'exam') window.setCardTab('exam');
+          }
         }
       }
     }
   }
 
-  // تحديث واجهة المستخدم وأزرار المشغل
   function updateUI() {
     const playBtn = document.getElementById('btn-speak-card');
     const playIcon = document.getElementById('icon-speaker-idle');
@@ -712,14 +579,12 @@
     }
 
     if (engineBadge) {
-      if (state.audioEngine === 'neural') {
-        engineBadge.innerText = 'Neural TTS • صوت مصري طبيعي';
-        engineBadge.className =
-          'text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-400/30';
+      if (state.audioEngine === 'human') {
+        engineBadge.innerText = '🎙️ تسجيل بشري حقيقي (مس / ندى بدوي)';
+        engineBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/40';
       } else {
-        engineBadge.innerText = 'صوت المتصفح البديل';
-        engineBadge.className =
-          'text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-400/30';
+        engineBadge.innerText = '🎙️ توليد مصري طبيعي بالذاكرة';
+        engineBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30';
       }
     }
 
@@ -760,13 +625,6 @@
     }
   }
 
-  function updateVoiceUI() {
-    const voiceSelector = document.getElementById('audio-voice-select');
-    if (voiceSelector) {
-      voiceSelector.value = state.voiceId;
-    }
-  }
-
   let toastTimer = null;
   function showAudioToast(msg, type = 'info') {
     const toast = document.getElementById('audio-toast');
@@ -776,6 +634,8 @@
     toast.className = `fixed bottom-16 left-1/2 -translate-x-1/2 z-50 px-3.5 py-1.5 rounded-xl med-glass-strong text-xs font-bold transition-all shadow-xl pointer-events-none ${
       type === 'error'
         ? 'text-rose-200 border-rose-500/40'
+        : type === 'warn'
+        ? 'text-amber-200 border-amber-500/40'
         : 'text-sky-200 border-sky-400/40'
     }`;
     toast.classList.remove('hidden');
@@ -783,41 +643,39 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
       toast.classList.add('hidden');
-    }, 2200);
+    }, 2800);
   }
 
-  // إتاحة الكائن للنطاق العام
+  // التصدير
   window.BioNeuralPlayer = {
-    loadItem: loadItem,
-    play: play,
-    pause: pause,
-    togglePlay: togglePlay,
-    stop: stop,
-    replayCurrentSegment: replayCurrentSegment,
-    nextSegment: nextSegment,
-    prevSegment: prevSegment,
-    jumpToSegment: jumpToSegment,
-    setSpeed: setSpeed,
-    setVolume: setVolume,
-    toggleMute: toggleMute,
-    setVoice: setVoice,
-    toggleAutoSpeech: toggleAutoSpeech,
-    prewarmSegment: prewarmSegment,
-    getState: function () {
-      return Object.assign({}, state);
-    }
+    loadItem,
+    play,
+    pause,
+    togglePlay,
+    stop,
+    replayCurrentSegment,
+    nextSegment,
+    prevSegment,
+    jumpToSegment,
+    setSpeed,
+    setVolume,
+    toggleMute,
+    toggleAutoSpeech,
+    getState: () => Object.assign({}, state)
   };
 
-  // تهيئة الواجهة عند اكتمال تحميل الصفحة
+  window.speakAnatomicalCard = function (item) {
+    if (!item) return;
+    loadItem(item, '', '', true);
+  };
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       updateSpeedButtonsUI();
       updateVolumeUI();
-      updateVoiceUI();
     });
   } else {
     updateSpeedButtonsUI();
     updateVolumeUI();
-    updateVoiceUI();
   }
 })();

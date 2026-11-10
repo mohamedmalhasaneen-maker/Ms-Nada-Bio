@@ -1,0 +1,39 @@
+{
+  "skull_frontal": {
+    "name": {
+      "id": "rec_skull_frontal_name",
+      "itemId": "skull_frontal",
+      "sectionKey": "name",
+      "mimeType": "audio/webm",
+      "speakerName": "مس / ندى بدوي (معلمة الأحياء)",
+      "isHuman": true,
+      "updatedAt": 1762768000000,
+      "durationSeconds": 3,
+      "audioUrl": "/api/human-audio/recording/skull_frontal/name"
+    },
+    "overview": {
+      "id": "rec_skull_frontal_overview",
+      "itemId": "skull_frontal",
+      "sectionKey": "overview",
+      "mimeType": "audio/webm",
+      "speakerName": "مس / ندى بدوي (معلمة الأحياء)",
+      "isHuman": true,
+      "updatedAt": 1762768000000,
+      "durationSeconds": 8,
+      "audioUrl": "/api/human-audio/recording/skull_frontal/overview"
+    }
+  },
+  "heart_organ": {
+    "overview": {
+      "id": "rec_heart_organ_overview",
+      "itemId": "heart_organ",
+      "sectionKey": "overview",
+      "mimeType": "audio/webm",
+      "speakerName": "مس / ندى بدوي (معلمة الأحياء)",
+      "isHuman": true,
+      "updatedAt": 1762768000000,
+      "durationSeconds": 12,
+      "audioUrl": "/api/human-audio/recording/heart_organ/overview"
+    }
+  }
+}
