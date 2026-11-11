@@ -30,8 +30,8 @@
   }
 
   // استرجاع التفضيلات
-  const savedSpeed = parseFloat(localStorage.getItem('bio_speed_pref') || '1.10');
-  const validSpeed = !isNaN(savedSpeed) && savedSpeed >= 0.75 && savedSpeed <= 1.6 ? savedSpeed : 1.10;
+  const savedSpeed = parseFloat(localStorage.getItem('bio_speed_pref') || '1.0');
+  const validSpeed = !isNaN(savedSpeed) && savedSpeed >= 0.7 && savedSpeed <= 2.1 ? savedSpeed : 1.0;
   const savedVol = parseFloat(localStorage.getItem('bio_vol_pref') || '1.0');
   const validVol = !isNaN(savedVol) && savedVol >= 0 && savedVol <= 1 ? savedVol : 1.0;
 
@@ -49,7 +49,7 @@
     isMuted: false,
     voiceId: localStorage.getItem('bio_voice_pref') || 'Kore',
     audioEngine: 'human', // 'human' | 'neural'
-    speakerName: 'مس / ندى بدوي (شرح بشري مصري)',
+    speakerName: 'مس / ندى بدوي (شرح مصري)',
     audioElement: null,
     pauseTimeout: null,
     isAutoPlayEnabled: false,
@@ -456,17 +456,53 @@
 
   function setSpeed(rate) {
     const val = parseFloat(rate);
-    if (!isNaN(val) && val >= 0.75 && val <= 1.6) {
+    if (!isNaN(val) && val >= 0.74 && val <= 2.05) {
       state.speed = val;
       localStorage.setItem('bio_speed_pref', val.toString());
 
+      // تطبيق السرعة فوراً على المقطع الصوتي الحالي دون توقف أو تشويش
       if (state.audioElement) {
         state.audioElement.playbackRate = val;
       }
 
-      updateSpeedButtonsUI();
-      showAudioToast(`سرعة الشرح: ${val.toFixed(2).replace(/\.00$/, '')}x`, 'info');
+      updateSpeedUI();
+      closeSpeedMenu();
+      showAudioToast(`تم ضبط سرعة الشرح: ${formatSpeedLabel(val)}`, 'info');
     }
+  }
+
+  function formatSpeedLabel(val) {
+    const num = parseFloat(val);
+    if (Math.abs(num - 1) < 0.01) return '1x';
+    return `${num}x`;
+  }
+
+  function toggleSpeedMenu(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const menu = document.getElementById('audio-speed-menu');
+    if (!menu) return;
+    const isHidden = menu.classList.contains('hidden');
+    if (isHidden) {
+      openSpeedMenu();
+    } else {
+      closeSpeedMenu();
+    }
+  }
+
+  function openSpeedMenu() {
+    const menu = document.getElementById('audio-speed-menu');
+    const btn = document.getElementById('btn-audio-speed');
+    if (!menu) return;
+    menu.classList.remove('hidden');
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+    updateSpeedUI();
+  }
+
+  function closeSpeedMenu() {
+    const menu = document.getElementById('audio-speed-menu');
+    const btn = document.getElementById('btn-audio-speed');
+    if (menu) menu.classList.add('hidden');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
   }
 
   function setVolume(vol) {
@@ -637,19 +673,21 @@
 
     if (engineBadge) {
       if (state.audioEngine === 'human') {
-        engineBadge.innerText = '🎙️ تسجيل بشري حقيقي (مس / ندى بدوي)';
+        engineBadge.innerText = '🎙️ شرح ندى بدوي (تسجيل بشري)';
         engineBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/40';
       } else if (state.audioEngine === 'neural') {
-        engineBadge.innerText = '🎙️ توليد مصري طبيعي بالذاكرة';
+        engineBadge.innerText = '🎙️ شرح ندى بدوي (توليد طبيعي)';
         engineBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30';
       } else {
-        engineBadge.innerText = '🎙️ شرح صوتي مدمج تلقائي';
+        engineBadge.innerText = '🎙️ شرح مدمج (نطق آلي)';
         engineBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30';
       }
     }
 
     if (prevBtn) prevBtn.disabled = state.currentSegmentIndex <= 0;
     if (nextBtn) nextBtn.disabled = state.currentSegmentIndex >= state.segments.length - 1;
+    if (prevBtn) prevBtn.classList.toggle('hidden', !prevBtn); // Simple check
+    if (nextBtn) nextBtn.classList.toggle('hidden', !nextBtn);
 
     highlightActiveTranscriptSentence();
     updateVisualizer(isRunning);
@@ -663,12 +701,27 @@
     });
   }
 
-  function updateSpeedButtonsUI() {
+  function updateSpeedUI() {
+    const curSpeed = state.speed;
+    const label = formatSpeedLabel(curSpeed);
+    const badgeEl = document.getElementById('speed-current-val');
+    if (badgeEl) {
+      badgeEl.innerText = label;
+    }
+
     document.querySelectorAll('[data-audio-speed]').forEach((b) => {
       const spd = parseFloat(b.getAttribute('data-audio-speed'));
-      const matches = Math.abs(spd - state.speed) < 0.04;
+      const matches = Math.abs(spd - curSpeed) < 0.04;
       b.classList.toggle('is-active', matches);
+      b.classList.toggle('bg-sky-500/25', matches);
+      b.classList.toggle('text-sky-300', matches);
+      b.classList.toggle('border-sky-400/50', matches);
+      b.classList.toggle('text-slate-300', !matches);
     });
+  }
+
+  function updateSpeedButtonsUI() {
+    updateSpeedUI();
   }
 
   function updateVolumeUI() {
@@ -706,6 +759,14 @@
     }, 2800);
   }
 
+  // إغلاق قائمة السرعة عند النقر في أي مكان خارجها
+  document.addEventListener('click', (e) => {
+    const speedContainer = document.getElementById('audio-speed-container');
+    if (speedContainer && !speedContainer.contains(e.target)) {
+      closeSpeedMenu();
+    }
+  });
+
   // التصدير
   window.BioNeuralPlayer = {
     loadItem,
@@ -719,6 +780,9 @@
     jumpToSegment,
     seek: seekToPercent,
     setSpeed,
+    toggleSpeedMenu,
+    openSpeedMenu,
+    closeSpeedMenu,
     setVolume,
     toggleMute,
     toggleAutoSpeech,
@@ -732,11 +796,11 @@
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      updateSpeedButtonsUI();
+      updateSpeedUI();
       updateVolumeUI();
     });
   } else {
-    updateSpeedButtonsUI();
+    updateSpeedUI();
     updateVolumeUI();
   }
 })();

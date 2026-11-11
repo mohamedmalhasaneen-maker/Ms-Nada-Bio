@@ -371,57 +371,69 @@
     return text;
   }
 
-  // 4. تقسيم النصوص الطويلة ذكياً لمنع القطع وضمان اكتمال الجمل
+  // 4. تقسيم النصوص الطويلة ذكياً لمنع القطع وضمان اكتمال الجمل وانسيابيتها
   function splitTextIntoChunks(text, maxLen) {
     if (!text || typeof text !== 'string') return [];
-    const limit = maxLen || 180;
+    // زيادة الحد إلى 320 حرف لتمكين الجمل الكاملة المتماسكة وتقليل فواصل التقطيع
+    const limit = maxLen || 320;
 
-    const rawSentences = text.split(/[.!\n؟]+/);
+    const rawSentences = text.split(/(?<=[.!\n؟])\s+/);
     const result = [];
+    let currentBlock = '';
 
     for (let i = 0; i < rawSentences.length; i++) {
       let sentence = rawSentences[i].trim();
       if (!sentence) continue;
 
-      if (sentence.length <= limit) {
-        result.push(sentence);
+      if (!currentBlock) {
+        if (sentence.length <= limit) {
+          currentBlock = sentence;
+        } else {
+          // الجملة بحد ذاتها أطول من الحد، تقسم عند الفواصل المنطقية
+          const subClauses = splitLongSentenceByClauses(sentence, limit);
+          result.push(...subClauses);
+        }
       } else {
-        const clauses = sentence.split(/[،؛]+/);
-        let currentChunk = '';
-
-        for (let j = 0; j < clauses.length; j++) {
-          let clause = clauses[j].trim();
-          if (!clause) continue;
-
-          if ((currentChunk + ' ' + clause).trim().length <= limit) {
-            currentChunk = (currentChunk + ' ' + clause).trim();
+        if ((currentBlock + ' ' + sentence).length <= limit) {
+          currentBlock += ' ' + sentence;
+        } else {
+          result.push(currentBlock);
+          if (sentence.length <= limit) {
+            currentBlock = sentence;
           } else {
-            if (currentChunk) {
-              result.push(currentChunk);
-              currentChunk = '';
-            }
-            if (clause.length <= limit) {
-              currentChunk = clause;
-            } else {
-              const words = clause.split(/\s+/);
-              let wordChunk = '';
-              for (let k = 0; k < words.length; k++) {
-                let w = words[k];
-                if ((wordChunk + ' ' + w).trim().length <= limit) {
-                  wordChunk = (wordChunk + ' ' + w).trim();
-                } else {
-                  if (wordChunk) result.push(wordChunk);
-                  wordChunk = w;
-                }
-              }
-              if (wordChunk) currentChunk = wordChunk;
-            }
+            const subClauses = splitLongSentenceByClauses(sentence, limit);
+            result.push(...subClauses);
+            currentBlock = '';
           }
         }
-        if (currentChunk) result.push(currentChunk);
       }
     }
-    return result;
+    if (currentBlock) {
+      result.push(currentBlock);
+    }
+
+    return result.length > 0 ? result : [text.trim()];
+  }
+
+  function splitLongSentenceByClauses(sentence, limit) {
+    const clauses = sentence.split(/(?<=[،؛])\s+/);
+    const res = [];
+    let curr = '';
+
+    for (let j = 0; j < clauses.length; j++) {
+      const c = clauses[j].trim();
+      if (!c) continue;
+      if (!curr) {
+        curr = c;
+      } else if ((curr + ' ' + c).length <= limit) {
+        curr += ' ' + c;
+      } else {
+        res.push(curr);
+        curr = c;
+      }
+    }
+    if (curr) res.push(curr);
+    return res.length > 0 ? res : [sentence];
   }
 
   // 5. تقسيم المحتوى التشريحي إلى الأقسام الأربعة المطلوبة بدقة (الاسم، البيان والوظيفة، المعالم والتراكيب، أسرار الامتحان)
@@ -435,7 +447,7 @@
       const trimmed = rawText.trim();
       if (!trimmed) return;
 
-      const chunks = splitTextIntoChunks(trimmed, 180);
+      const chunks = splitTextIntoChunks(trimmed, 320);
       chunks.forEach((chunk) => {
         const spoken = preparePhoneticAnatomicalText(chunk);
         if (spoken && spoken.trim()) {
@@ -450,9 +462,8 @@
       });
     }
 
-    // 1. الاسم باللغة العربية (Clean Arabic Name)
+    // 1. الاسم باللغة العربية مع التمهيد
     const rawName = (item.name || '').replace(/\s*\([A-Za-z\s,\.\-&/0-9]+\)/g, '').trim() || 'عنصر تشريحي';
-    addSectionChunks(rawName + '.', 'name', 'الاسم');
 
     // 2. قسم البيان والوظيفة بالكامل (Overview & Function)
     const overviewParts = [];
@@ -462,8 +473,11 @@
     if (item.primaryFunction) overviewParts.push(`الوظيفة الرئيسية: ${item.primaryFunction}.`);
     if (item.secondaryFunction) overviewParts.push(`الوظيفة الثانوية: ${item.secondaryFunction}.`);
     if (item.role && !item.functionDesc && !item.primaryFunction) overviewParts.push(`الوظيفة الحيوية: ${item.role}.`);
-    if (overviewParts.length > 0) {
-      addSectionChunks(overviewParts.join(' '), 'overview', 'البيان والوظيفة');
+
+    // دمج اسم العنصر مع بداية الشرح مباشرة ليكون مسترسلاً وطبيعياً كشرح معلمة
+    const introAndOverview = `${rawName}، ${overviewParts.join(' ')}`.trim();
+    if (introAndOverview) {
+      addSectionChunks(introAndOverview, 'overview', 'البيان والوظيفة');
     }
 
     // 3. قسم المعالم والتراكيب بالكامل (Landmarks & Structures)

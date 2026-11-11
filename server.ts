@@ -19,6 +19,8 @@ const inFlightServerRequests = new Map<string, Promise<{ audioBase64: string; mi
 const MAX_CACHE_ENTRIES = 800;
 const DISK_CACHE_DIR = path.resolve(__dirname, '.audio_cache');
 
+let globalQuotaExceededUntil = 0; // Global circuit breaker for quota
+
 // Human Audio Voice Recording Persistent Storage System
 const HUMAN_AUDIO_DIR = path.resolve(__dirname, '.human_audio_storage');
 const HUMAN_MANIFEST_PATH = path.join(HUMAN_AUDIO_DIR, 'human_audio_manifest.json');
@@ -161,7 +163,58 @@ function writeDiskCache(key: string, data: { audioBase64: string; mimeType: stri
   }
 }
 
-// Rigorous Audio Data Validation and PCM to RIFF/WAVE Converter
+// Automatic silence detection and trimming on 16-bit PCM audio
+function trimPcm16Silence(pcmBuffer: Buffer, sampleRate = 24000, numChannels = 1): Buffer {
+  const bytesPerSample = 2 * numChannels;
+  const numSamples = Math.floor(pcmBuffer.length / bytesPerSample);
+  if (numSamples < 240) return pcmBuffer;
+
+  const frameSamples = Math.floor(sampleRate * 0.008); // 8ms window
+  const thresholdRms = 40; // True speech onset threshold (ambient noise floor is < 20)
+  const keepLeadSamples = Math.floor(sampleRate * 0.015); // 15ms lead safety pad
+  const keepTrailSamples = Math.floor(sampleRate * 0.035); // 35ms trail natural decay pad
+
+  let firstActiveFrame = 0;
+  for (let i = 0; i <= numSamples - frameSamples; i += frameSamples) {
+    let sumSq = 0;
+    for (let j = 0; j < frameSamples; j++) {
+      const idx = (i + j) * bytesPerSample;
+      const s = pcmBuffer.readInt16LE(idx);
+      sumSq += s * s;
+    }
+    const rms = Math.sqrt(sumSq / frameSamples);
+    if (rms > thresholdRms) {
+      firstActiveFrame = i;
+      break;
+    }
+  }
+
+  let lastActiveFrame = numSamples - frameSamples;
+  for (let i = numSamples - frameSamples; i >= 0; i -= frameSamples) {
+    let sumSq = 0;
+    for (let j = 0; j < frameSamples; j++) {
+      const idx = (i + j) * bytesPerSample;
+      const s = pcmBuffer.readInt16LE(idx);
+      sumSq += s * s;
+    }
+    const rms = Math.sqrt(sumSq / frameSamples);
+    if (rms > thresholdRms) {
+      lastActiveFrame = i + frameSamples;
+      break;
+    }
+  }
+
+  if (lastActiveFrame <= firstActiveFrame) return pcmBuffer;
+
+  const startSample = Math.max(0, firstActiveFrame - keepLeadSamples);
+  const endSample = Math.min(numSamples, lastActiveFrame + keepTrailSamples);
+  const startByte = startSample * bytesPerSample;
+  const endByte = endSample * bytesPerSample;
+
+  return pcmBuffer.slice(startByte, endByte);
+}
+
+// Rigorous Audio Data Validation, Silence Trimming, and PCM to RIFF/WAVE Converter
 function formatAndValidateAudioData(base64Data: string, reportedMimeType: string) {
   if (!base64Data || typeof base64Data !== 'string') {
     throw new Error('بيانات الصوت فارغة أو غير صالحة');
@@ -175,8 +228,31 @@ function formatAndValidateAudioData(base64Data: string, reportedMimeType: string
   const headerStr = rawBuffer.slice(0, 4).toString('utf-8');
   const waveStr = rawBuffer.slice(8, 12).toString('utf-8');
 
-  // Case 1: Valid RIFF WAVE header
+  // Case 1: Valid RIFF WAVE header -> trim internal PCM silence if 16-bit 24kHz
   if (headerStr === 'RIFF' && waveStr === 'WAVE') {
+    try {
+      const sampleRate = rawBuffer.readUInt32LE(24);
+      const numChannels = rawBuffer.readUInt16LE(22);
+      const bitsPerSample = rawBuffer.readUInt16LE(34);
+      if (bitsPerSample === 16 && (sampleRate === 24000 || sampleRate === 22050 || sampleRate === 16000)) {
+        let dataOffset = 36;
+        while (dataOffset < rawBuffer.length - 8) {
+          if (rawBuffer.toString('ascii', dataOffset, dataOffset + 4) === 'data') break;
+          dataOffset++;
+        }
+        if (dataOffset < rawBuffer.length - 8) {
+          const pcmPayload = rawBuffer.slice(dataOffset + 8);
+          const trimmedPcm = trimPcm16Silence(pcmPayload, sampleRate, numChannels);
+          const wavBuffer = buildWavBuffer(trimmedPcm, sampleRate, numChannels, bitsPerSample);
+          return {
+            audioBase64: wavBuffer.toString('base64'),
+            mimeType: 'audio/wav',
+            byteLength: wavBuffer.length
+          };
+        }
+      }
+    } catch (_) {}
+
     return {
       audioBase64: base64Data,
       mimeType: 'audio/wav',
@@ -202,11 +278,22 @@ function formatAndValidateAudioData(base64Data: string, reportedMimeType: string
     };
   }
 
-  // Case 4: Raw PCM 16-bit Mono (Wrap with valid 44-byte RIFF WAVE header at 24000 Hz)
+  // Case 4: Raw PCM 16-bit Mono (Trim leading/trailing silence and wrap with RIFF WAVE)
   const sampleRate = 24000;
   const numChannels = 1;
   const bitsPerSample = 16;
-  const dataSize = rawBuffer.length;
+  const trimmedPcm = trimPcm16Silence(rawBuffer, sampleRate, numChannels);
+  const wavBuffer = buildWavBuffer(trimmedPcm, sampleRate, numChannels, bitsPerSample);
+
+  return {
+    audioBase64: wavBuffer.toString('base64'),
+    mimeType: 'audio/wav',
+    byteLength: wavBuffer.length
+  };
+}
+
+function buildWavBuffer(pcmBuffer: Buffer, sampleRate: number, numChannels: number, bitsPerSample: number): Buffer {
+  const dataSize = pcmBuffer.length;
   const chunkSize = 36 + dataSize;
   const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
   const blockAlign = numChannels * (bitsPerSample / 8);
@@ -226,13 +313,8 @@ function formatAndValidateAudioData(base64Data: string, reportedMimeType: string
   wavBuffer.write('data', 36);
   wavBuffer.writeUInt32LE(dataSize, 40);
 
-  rawBuffer.copy(wavBuffer, 44);
-
-  return {
-    audioBase64: wavBuffer.toString('base64'),
-    mimeType: 'audio/wav',
-    byteLength: wavBuffer.length
-  };
+  pcmBuffer.copy(wavBuffer, 44);
+  return wavBuffer;
 }
 
 let aiClient: GoogleGenAI | null = null;
@@ -373,7 +455,7 @@ app.get('/api/human-audio/recording/:itemId/:sectionKey', (req: Request, res: Re
   const { itemId, sectionKey } = req.params;
   const sections = humanAudioMap.get(itemId);
   if (!sections || !sections[sectionKey]) {
-    res.status(404).json({ success: false, error: 'HUMAN_RECORDING_NOT_FOUND', message: 'لم يتم رفع تسجيل بشري لهذا العضو حتى الآن.' });
+    res.status(404).json({ success: false, error: 'HUMAN_RECORDING_NOT_FOUND', message: 'تسجيل غير متوفر.' });
     return;
   }
 
@@ -521,6 +603,16 @@ app.post('/api/tts/test', async (req: Request, res: Response) => {
   const voiceName = req.body?.voiceName || 'Kore';
   const cacheKey = getCacheKey(testText, voiceName);
 
+  if (Date.now() < globalQuotaExceededUntil) {
+    res.status(200).json({
+      success: false,
+      error: 'QUOTA_EXCEEDED',
+      message: 'تم استنفاد حصة التوليد اليومية.',
+      quotaExceeded: true
+    });
+    return;
+  }
+
   if (audioCache.has(cacheKey) || readDiskCache(cacheKey)) {
     const cached = audioCache.get(cacheKey) || readDiskCache(cacheKey)!;
     const verified = formatAndValidateAudioData(cached.audioBase64, cached.mimeType);
@@ -613,8 +705,13 @@ app.post('/api/tts/test', async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     const isQuota = err?.message?.includes('429') || err?.message?.includes('QUOTA') || err?.message?.includes('RESOURCE_EXHAUSTED');
-    const statusCode = isQuota ? 429 : 500;
-    logAudioError('gemini-tts', isQuota ? 'QUOTA_EXCEEDED' : 'TTS_TEST_FAILED', statusCode, err?.message || 'Test failed');
+    
+    if (isQuota) {
+      globalQuotaExceededUntil = Date.now() + 60 * 60 * 1000; // Block for 1 hour
+      console.warn('[Audio Server] Gemini TTS quota reached (429) during test.');
+    }
+
+    logAudioError('gemini-tts', isQuota ? 'QUOTA_EXCEEDED' : 'TTS_TEST_FAILED', isQuota ? 429 : 500, err?.message || 'Test failed');
 
     res.status(isQuota ? 200 : 500).json({
       success: false,
@@ -622,23 +719,14 @@ app.post('/api/tts/test', async (req: Request, res: Response) => {
       engine: 'GoogleGenAI Gemini TTS',
       error: isQuota ? 'QUOTA_EXCEEDED' : 'TTS_TEST_FAILED',
       message: isQuota
-        ? 'تم استنفاد حصة التوليد المجانية اليومية من خادم Gemini API (رمز 429). يمكنك الاستماع للتسجيلات المحفوظة مسبقاً.'
+        ? 'تم استنفاد حصة التوليد اليومية (429).'
         : (err?.message || 'فشل اختبار التوليد الصوتي')
     });
   }
 });
 
-// Global quota circuit breaker
-let globalQuotaExceededUntil = 0;
-
 // Primary Neural TTS generation endpoint
 app.post('/api/tts', async (req: Request, res: Response): Promise<void> => {
-  // 0. Circuit breaker check
-  if (Date.now() < globalQuotaExceededUntil) {
-    res.json({ success: false, quotaExceeded: true, message: 'تم استنفاد حصة التوليد مؤقتاً.' });
-    return;
-  }
-  
   try {
     const { text, voiceName = 'Kore' } = req.body || {};
 
@@ -649,6 +737,17 @@ app.post('/api/tts', async (req: Request, res: Response): Promise<void> => {
 
     const trimmedText = text.trim();
     const cacheKey = getCacheKey(trimmedText, voiceName);
+
+    // 0. Check global quota breaker
+    if (Date.now() < globalQuotaExceededUntil) {
+      res.status(200).json({
+        success: false,
+        error: 'QUOTA_EXCEEDED',
+        message: 'تم استنفاد حصة التوليد اليومية.',
+        quotaExceeded: true
+      });
+      return;
+    }
 
     // 1. Check in-memory LRU cache
     if (audioCache.has(cacheKey)) {
@@ -716,7 +815,7 @@ app.post('/api/tts', async (req: Request, res: Response): Promise<void> => {
             });
 
             const timeoutPromise = new Promise<never>((_, reject) => {
-              setTimeout(() => reject(new Error('TTS_REQUEST_TIMEOUT')), 6000);
+              setTimeout(() => reject(new Error('TTS_REQUEST_TIMEOUT')), 15000);
             });
 
             const response: any = await Promise.race([ttsPromise, timeoutPromise]);
@@ -767,13 +866,15 @@ app.post('/api/tts', async (req: Request, res: Response): Promise<void> => {
     });
   } catch (err: any) {
     const isQuota = err?.message?.includes('429') || err?.message?.includes('QUOTA') || err?.message?.includes('RESOURCE_EXHAUSTED');
+    
     if (isQuota) {
-      globalQuotaExceededUntil = Date.now() + 60000;
-      console.warn('[Audio Server] Gemini TTS quota reached (429). Falling back to client-side speech engine and blocking requests for 1 minute.');
+      globalQuotaExceededUntil = Date.now() + 60 * 60 * 1000; // Block for 1 hour
+      console.warn('[Audio Server] Gemini TTS quota reached (429). Falling back to client-side speech engine and blocking requests for 1 hour.');
     } else {
-      logAudioError('gemini-3.8-flash-lite-tts', 'TTS_GENERATION_FAILED', 500, err?.message || 'TTS generation failed');
       console.error('Error generating Neural TTS:', err?.message || err);
     }
+
+    logAudioError('gemini-3.8-flash-lite-tts', isQuota ? 'QUOTA_EXCEEDED' : 'TTS_GENERATION_FAILED', isQuota ? 429 : 500, err?.message || 'TTS generation failed');
 
     res.status(isQuota ? 200 : 500).json({
       success: false,

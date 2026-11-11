@@ -2481,23 +2481,12 @@
       return;
     }
 
-    let html = `<div class="space-y-4">
-      <button
-        type="button"
-        onclick="if(window.BioNeuralPlayer) window.BioNeuralPlayer.stop()"
-        class="flex w-full items-center justify-center gap-2 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition-all"
-        aria-label="إيقاف الصوت"
-      >
-        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-           <rect x="6" y="6" width="12" height="12" rx="1.5" />
-        </svg>
-        إيقاف الصوت فوراً
-      </button>`;
+    let html = `<div class="space-y-4">`;
     html += `
-      <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+      <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between text-right shadow-lg ring-1 ring-white/5">
         <div>
           <h4 class="text-sm sm:text-base font-extrabold text-white">${sysData.name}</h4>
-          <p class="text-[11px] text-slate-300">يحتوي هذا القسم على تفاصيل ودراسة ${sysData.organs.length} أعضاء وتراكيب حيوية رئيسية</p>
+          <p class="text-[11px] text-slate-300">يحتوي هذا القسم على دراسة ${sysData.organs.length} أعضاء وتراكيب حيوية رئيسية</p>
         </div>
         <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold" style="background: ${sysData.accent}20; color: ${sysData.accent}; border: 1px solid ${sysData.accent}40">${sysData.organs.length} أعضاء</span>
       </div>
@@ -2565,22 +2554,6 @@
   }
   window.speakEncyclopediaOrgan = speakEncyclopediaOrgan;
 
-  function runAnatomicalMappingAuditUI() {
-    window.allMeshesBySystem = allMeshesBySystem;
-    if (window.ANATOMICAL_REGISTRY && window.ANATOMICAL_REGISTRY.runAnatomicalMappingAudit) {
-      const res = window.ANATOMICAL_REGISTRY.runAnatomicalMappingAudit();
-      const msg = `تم فحص وتدقيق ${res.grandTotal} مجسماً تشريحياً بنسبة نجاح ${res.successRate}! (راجع Console)`;
-      setInteractionStatus(msg, "active");
-      const toast = document.getElementById("audio-toast");
-      if (toast) {
-        toast.innerText = msg;
-        toast.className = "fixed bottom-16 left-1/2 -translate-x-1/2 z-50 px-3.5 py-1.5 rounded-xl med-glass-strong text-xs font-bold text-emerald-300 border border-emerald-400/40 transition-all shadow-xl pointer-events-none";
-        toast.classList.remove("hidden");
-        setTimeout(() => toast.classList.add("hidden"), 3000);
-      }
-    }
-  }
-  window.runAnatomicalMappingAuditUI = runAnatomicalMappingAuditUI;
   window.allMeshesBySystem = allMeshesBySystem;
 
   // --- 15. التجاوب وحلقة العرض الرئيسية (Render Loop) ---
