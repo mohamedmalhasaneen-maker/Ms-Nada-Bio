@@ -199,15 +199,20 @@
 
     const utterance = new SpeechSynthesisUtterance(segment.spokenText);
     utterance.lang = 'ar-EG';
-    utterance.rate = Math.max(0.75, Math.min(1.35, state.speed));
+    utterance.rate = Math.max(0.75, Math.min(1.8, state.speed));
     utterance.volume = state.isMuted ? 0 : state.volume;
-    utterance.pitch = 1.05;
+    utterance.pitch = 1.08;
 
     const voices = window.speechSynthesis.getVoices();
     if (voices && voices.length > 0) {
-      const arVoice = voices.find((v) => (v.lang && v.lang.toLowerCase().includes('ar')) || (v.name && v.name.toLowerCase().includes('arabic')));
-      if (arVoice) {
-        utterance.voice = arVoice;
+      // تفضيل الصوت المصري (ar-EG) والأنثوي
+      const egVoice = voices.find((v) => (v.lang === 'ar-EG' || v.lang === 'ar_EG') && (v.name.toLowerCase().includes('female') || v.name.includes('سلمى') || v.name.includes('هدى') || v.name.includes('ليلى')));
+      const anyEgVoice = voices.find((v) => v.lang === 'ar-EG' || v.lang === 'ar_EG');
+      const anyArVoice = voices.find((v) => (v.lang && v.lang.toLowerCase().startsWith('ar')) || (v.name && v.name.toLowerCase().includes('arabic')));
+      
+      const chosenVoice = egVoice || anyEgVoice || anyArVoice;
+      if (chosenVoice) {
+        utterance.voice = chosenVoice;
       }
     }
 
@@ -673,13 +678,13 @@
 
     if (engineBadge) {
       if (state.audioEngine === 'human') {
-        engineBadge.innerText = '🎙️ شرح ندى بدوي (تسجيل بشري)';
+        engineBadge.innerText = '🎙️ شرح ندى بدوي (مصري)';
         engineBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/40';
       } else if (state.audioEngine === 'neural') {
-        engineBadge.innerText = '🎙️ شرح ندى بدوي (توليد طبيعي)';
+        engineBadge.innerText = '🎙️ شرح ندى بدوي (مصري طبيعي)';
         engineBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30';
       } else {
-        engineBadge.innerText = '🎙️ شرح مدمج (نطق آلي)';
+        engineBadge.innerText = '🎙️ معلمة الأحياء (مصري ar-EG)';
         engineBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30';
       }
     }
@@ -706,17 +711,23 @@
     const label = formatSpeedLabel(curSpeed);
     const badgeEl = document.getElementById('speed-current-val');
     if (badgeEl) {
-      badgeEl.innerText = label;
+      badgeEl.innerText = `${label} ▼`;
     }
 
     document.querySelectorAll('[data-audio-speed]').forEach((b) => {
       const spd = parseFloat(b.getAttribute('data-audio-speed'));
       const matches = Math.abs(spd - curSpeed) < 0.04;
-      b.classList.toggle('is-active', matches);
-      b.classList.toggle('bg-sky-500/25', matches);
-      b.classList.toggle('text-sky-300', matches);
-      b.classList.toggle('border-sky-400/50', matches);
-      b.classList.toggle('text-slate-300', !matches);
+      const checkIcon = b.querySelector('.speed-check-icon');
+      
+      b.classList.toggle('bg-sky-500/20', matches);
+      b.classList.toggle('text-white', matches);
+      b.classList.toggle('border', matches);
+      b.classList.toggle('border-sky-400/40', matches);
+      b.classList.toggle('text-slate-200', !matches);
+
+      if (checkIcon) {
+        checkIcon.style.opacity = matches ? '1' : '0';
+      }
     });
   }
 

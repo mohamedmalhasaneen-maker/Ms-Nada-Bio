@@ -707,7 +707,7 @@ app.post('/api/tts/test', async (req: Request, res: Response) => {
     const isQuota = err?.message?.includes('429') || err?.message?.includes('QUOTA') || err?.message?.includes('RESOURCE_EXHAUSTED');
     
     if (isQuota) {
-      globalQuotaExceededUntil = Date.now() + 60 * 60 * 1000; // Block for 1 hour
+      globalQuotaExceededUntil = Date.now() + 15 * 1000; // Cool off for 15s
       console.warn('[Audio Server] Gemini TTS quota reached (429) during test.');
     }
 
@@ -868,8 +868,8 @@ app.post('/api/tts', async (req: Request, res: Response): Promise<void> => {
     const isQuota = err?.message?.includes('429') || err?.message?.includes('QUOTA') || err?.message?.includes('RESOURCE_EXHAUSTED');
     
     if (isQuota) {
-      globalQuotaExceededUntil = Date.now() + 60 * 60 * 1000; // Block for 1 hour
-      console.warn('[Audio Server] Gemini TTS quota reached (429). Falling back to client-side speech engine and blocking requests for 1 hour.');
+      globalQuotaExceededUntil = Date.now() + 15 * 1000; // Cool off for 15 seconds only
+      console.warn('[Audio Server] Gemini TTS quota/auth reached. Falling back to client-side speech engine and cooling off for 15 seconds.');
     } else {
       console.error('Error generating Neural TTS:', err?.message || err);
     }

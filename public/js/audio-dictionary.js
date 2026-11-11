@@ -322,19 +322,19 @@
     out = out.replace(/\bDNA\b/gi, 'الحَمْض النَّوَوِي دِي إِنْ إِيه');
     out = out.replace(/\bRNA\b/gi, 'الحَمْض النَّوَوِي الرِّيبُوزِي آرْ إِنْ إِيه');
 
-    // إحصائيات المنهج المصري
-    out = out.replace(/\b206\b/g, 'مِائَتَانِ وَسِتّ');
-    out = out.replace(/\b600\+/g, 'أَكْثَر مِنْ سِتِّمِائَة');
-    out = out.replace(/\b620\b/g, 'سِتِّمِائَةٍ وَعِشْرُونَ');
-    out = out.replace(/\b43\s*زوج/g, 'ثَلَاثَةٌ وَأَرْبَعُونَ زَوْجاً');
-    out = out.replace(/\b12\s*زوج/g, 'اثْنَا عَشَرَ زَوْجاً');
-    out = out.replace(/\b31\s*زوج/g, 'وَاحِدٌ وَثَلَاثُونَ زَوْجاً');
-    out = out.replace(/\b33\s*فقرة/g, 'ثَلَاثٌ وَثَلَاثُونَ فَقْرَةً');
-    out = out.replace(/\b26\s*عظمة/g, 'سِتٌّ وَعِشْرُونَ عَظْمَةً');
-    out = out.replace(/\b80\s*عظمة/g, 'ثَمَانُونَ عَظْمَةً');
-    out = out.replace(/\b126\s*عظمة/g, 'مِائَةٌ وَسِتٌّ وَعِشْرُونَ عَظْمَةً');
-    out = out.replace(/\b1\s*عظمة/g, 'عَظْمَةٌ وَاحِدَة');
-    out = out.replace(/\b2\s*عظمة/g, 'عَظْمَتَان');
+    // إحصائيات المنهج المصري بالنطق الطبيعي
+    out = out.replace(/\b206\b/g, 'مِتين وسِتّة');
+    out = out.replace(/\b600\+/g, 'أَكْثَر مِنْ سِتِّمِية');
+    out = out.replace(/\b620\b/g, 'سِتِّمِية وعِشْرين');
+    out = out.replace(/\b43\s*زوج/g, 'ثَلاثَة وأَرْبِعين زَوْج');
+    out = out.replace(/\b12\s*زوج/g, 'اثْنا عَشَر زَوْج');
+    out = out.replace(/\b31\s*زوج/g, 'واحِد وثَلاثين زَوْج');
+    out = out.replace(/\b33\s*فقرة/g, 'ثَلاثة وتَلاتين فَقْرَة');
+    out = out.replace(/\b26\s*عظمة/g, 'سِتّة وعِشْرين عَظْمَة');
+    out = out.replace(/\b80\s*عظمة/g, 'تَمانين عَظْمَة');
+    out = out.replace(/\b126\s*عظمة/g, 'مِية وسِتّة وعِشْرين عَظْمَة');
+    out = out.replace(/\b1\s*عظمة/g, 'عَظْمَة واحْدَة');
+    out = out.replace(/\b2\s*عظمة/g, 'عَظْمِتِين');
 
     // تنظيف أو إزالة الكلمات الإنجليزية واللاتينية الموضوعة بين أقواس لتفادي تلعثم القارئ
     out = out.replace(/\s*\([A-Za-z\s,\.\-&/0-9]+\)/g, '');
@@ -436,7 +436,78 @@
     return res.length > 0 ? res : [sentence];
   }
 
-  // 5. تقسيم المحتوى التشريحي إلى الأقسام الأربعة المطلوبة بدقة (الاسم، البيان والوظيفة، المعالم والتراكيب، أسرار الامتحان)
+  // تحويل الصياغات التقريرية الجامدة إلى أسلوب شرح معلمة أحياء مصرية طبيعية وتلقائية
+  function convertToEgyptianTeacherStyle(text, sectionType, itemName) {
+    if (!text || typeof text !== 'string') return '';
+    let s = text.trim();
+
+    // إزالة التسميات التقريرية الجافة وتحويلها لأسلوب محادثة مصري
+    s = s.replace(/التصنيف التشريحي:\s*/g, 'ودِه من حيث التصنيف: ');
+    s = s.replace(/الموقع:\s*/g, 'ومكانه بالتحديد: ');
+    s = s.replace(/الوظيفة الرئيسية:\s*/g, 'ووظيفته الأساسية: ');
+    s = s.replace(/الوظيفة الثانوية:\s*/g, 'وكمان بيقوم بدور مهم: ');
+    s = s.replace(/الوظيفة الحيوية:\s*/g, 'ووظيفته الحيوية في الجسم: ');
+    s = s.replace(/المعالم التشريحية:\s*/g, 'ولما نبص على معالمه التشريحية: ');
+    s = s.replace(/التركيب الدقيق:\s*/g, 'وتركيبه الدقيق بيوضح إن: ');
+    s = s.replace(/العلاقات والاتصالات التشريحية:\s*/g, 'وعلاقته بالأعضاء اللي حواليه: ');
+    s = s.replace(/التأثير والتمفصل:\s*/g, 'وبالنسبة للمفاصل والتمفصل: ');
+    s = s.replace(/منشأ العضلة:\s*/g, 'وبتبدأ العضلة دي من: ');
+    s = s.replace(/ارتكاز العضلة:\s*/g, 'وبتنتهي وبتمسك في: ');
+    s = s.replace(/الحركة والعمل:\s*/g, 'وعملها الحركي إنها: ');
+    s = s.replace(/التعصيب العصبي:\s*/g, 'والأعصاب اللي بتغذيها: ');
+    s = s.replace(/العضلات المتصلة:\s*/g, 'والعضلات اللي ماسكة فيها: ');
+    s = s.replace(/الأهمية المنهجية:\s*/g, 'وفي منهج الثانوية العامة: ');
+
+    // صياغات الربط المصرية الطبيعية وتوافقها مع بادئات العطف
+    s = s.replace(/([وف])?يقع في/g, '$1موجود في');
+    s = s.replace(/([وف])?تقع في/g, '$1موجودة في');
+    s = s.replace(/([وف])?توجد في/g, '$1موجودة في');
+    s = s.replace(/([وف])?يوجد في/g, '$1موجود في');
+    s = s.replace(/([وف])?تشكل\b/g, '$1بتشكل');
+    s = s.replace(/([وف])?يشكل\b/g, '$1بيشكل');
+    s = s.replace(/([وف])?تحمي\b/g, '$1بتحمي');
+    s = s.replace(/([وف])?يحمي\b/g, '$1بيحمي');
+    s = s.replace(/([وف])?تعمل على/g, '$1بتساعد على');
+    s = s.replace(/([وف])?يعمل على/g, '$1بيساعد على');
+    s = s.replace(/([وف])?تساعد في/g, '$1بتساعد في');
+    s = s.replace(/([وف])?يساعد في/g, '$1بيساعد في');
+    s = s.replace(/([وف])?تقوم بـ/g, '$1بتعمل');
+    s = s.replace(/([وف])?يقوم بـ/g, '$1بيعمل');
+    s = s.replace(/([وف])?تتمفصل مع/g, '$1بتتمفصل مع');
+    s = s.replace(/([وف])?يتمفصل مع/g, '$1بيتمفصل مع');
+    s = s.replace(/([وف])?تتصل مع/g, '$1متصلة مع');
+    s = s.replace(/([وف])?يتصل مع/g, '$1متصل مع');
+    s = s.replace(/([وف])?تتصل بـ/g, '$1متصلة بـ');
+    s = s.replace(/([وف])?يتصل بـ/g, '$1متصل بـ');
+    s = s.replace(/([وف])?ترتبط بـ/g, '$1مربوطة بـ');
+    s = s.replace(/([وف])?يرتبط بـ/g, '$1مربوط بـ');
+    s = s.replace(/([وف])?تحتوي على/g, '$1فيها');
+    s = s.replace(/([وف])?يحتوي على/g, '$1فيه');
+    s = s.replace(/([وف])?تؤدي إلى/g, '$1بتأدي لـ');
+    s = s.replace(/([وف])?يؤدي إلى/g, '$1بيأدي لـ');
+    s = s.replace(/([وف])?تتكون من/g, '$1بتتكون من');
+    s = s.replace(/([وف])?يتكون من/g, '$1بيتكون من');
+    s = s.replace(/([وف])?تنقل\b/g, '$1بتنقل');
+    s = s.replace(/([وف])?ينقل\b/g, '$1بينقل');
+    s = s.replace(/([وف])?تفرز\b/g, '$1بتفرز');
+    s = s.replace(/([وف])?يفرز\b/g, '$1بيفرز');
+    s = s.replace(/([وف])?تتحكم في/g, '$1بتتحكم في');
+    s = s.replace(/([وف])?يتحكم في/g, '$1بيتحكم في');
+    s = s.replace(/([وف])?تمنع\b/g, '$1بتمنع');
+    s = s.replace(/([وف])?يمنع\b/g, '$1بيمنع');
+    s = s.replace(/([وف])?تبدأ من/g, '$1بتبدأ من');
+    s = s.replace(/([وف])?يبدأ من/g, '$1بيبدأ من');
+    s = s.replace(/([وف])?تنتهي عند/g, '$1بتنتهي عند');
+    s = s.replace(/([وف])?ينتهي عند/g, '$1بينتهي عند');
+    s = s.replace(/([وف])?يصل بين/g, '$1بيوصل بين');
+    s = s.replace(/([وف])?تصل بين/g, '$1بتوصل بين');
+    s = s.replace(/([وف])?يمتد من/g, '$1بيمتد من');
+    s = s.replace(/([وف])?تمتد من/g, '$1بتمتد من');
+
+    return s;
+  }
+
+  // 5. تقسيم المحتوى التشريحي إلى الأقسام المطلوبة بأسلوب المعلمة المصرية (ندا بدوي)
   function parseAnatomicalSentences(item) {
     if (!item) return [];
 
@@ -453,7 +524,7 @@
         if (spoken && spoken.trim()) {
           segments.push({
             id: `${type}_${segments.length}`,
-            type: type, // 'name' | 'overview' | 'landmarks' | 'exam'
+            type: type, // 'overview' | 'landmarks' | 'exam'
             label: label,
             rawText: chunk,
             spokenText: spoken
@@ -462,10 +533,10 @@
       });
     }
 
-    // 1. الاسم باللغة العربية مع التمهيد
-    const rawName = (item.name || '').replace(/\s*\([A-Za-z\s,\.\-&/0-9]+\)/g, '').trim() || 'عنصر تشريحي';
+    // 1. استخراج الاسم العربي النقي
+    const rawName = (item.name || '').replace(/\s*\([A-Za-z\s,\.\-&/0-9]+\)/g, '').trim() || 'العنصر التشريحي';
 
-    // 2. قسم البيان والوظيفة بالكامل (Overview & Function)
+    // 2. قسم البيان والوظيفة (Overview & Function) بأسلوب الشرح المصري الحيوي
     const overviewParts = [];
     if (item.classification) overviewParts.push(`التصنيف التشريحي: ${item.classification}.`);
     if (item.location) overviewParts.push(`الموقع: ${item.location}.`);
@@ -474,13 +545,14 @@
     if (item.secondaryFunction) overviewParts.push(`الوظيفة الثانوية: ${item.secondaryFunction}.`);
     if (item.role && !item.functionDesc && !item.primaryFunction) overviewParts.push(`الوظيفة الحيوية: ${item.role}.`);
 
-    // دمج اسم العنصر مع بداية الشرح مباشرة ليكون مسترسلاً وطبيعياً كشرح معلمة
-    const introAndOverview = `${rawName}، ${overviewParts.join(' ')}`.trim();
-    if (introAndOverview) {
-      addSectionChunks(introAndOverview, 'overview', 'البيان والوظيفة');
+    let rawOverview = overviewParts.join(' ');
+    let egyptianOverview = convertToEgyptianTeacherStyle(rawOverview, 'overview', rawName);
+    let fullOverviewText = `بصوا معايا يا شباب، هنا بنتكلم عن ${rawName}. ${egyptianOverview}`.trim();
+    if (fullOverviewText) {
+      addSectionChunks(fullOverviewText, 'overview', 'البيان والوظيفة');
     }
 
-    // 3. قسم المعالم والتراكيب بالكامل (Landmarks & Structures)
+    // 3. قسم المعالم والتراكيب والمفاصل (Landmarks & Structures)
     const landmarksParts = [];
     if (item.landmarks) landmarksParts.push(`المعالم التشريحية: ${item.landmarks}.`);
     if (item.structure) landmarksParts.push(`التركيب الدقيق: ${item.structure}.`);
@@ -491,16 +563,24 @@
     if (item.action) landmarksParts.push(`الحركة والعمل: ${item.action}.`);
     if (item.innervation) landmarksParts.push(`التعصيب العصبي: ${item.innervation}.`);
     if (item.muscleAttachments) landmarksParts.push(`العضلات المتصلة: ${item.muscleAttachments}.`);
+
     if (landmarksParts.length > 0) {
-      addSectionChunks(landmarksParts.join(' '), 'landmarks', 'المعالم والتراكيب');
+      let rawLandmarks = landmarksParts.join(' ');
+      let egyptianLandmarks = convertToEgyptianTeacherStyle(rawLandmarks, 'landmarks', rawName);
+      let fullLandmarksText = `تعالوا نفهم معالم وتركيب ${rawName} بالتفصيل: ${egyptianLandmarks}`.trim();
+      addSectionChunks(fullLandmarksText, 'landmarks', 'المعالم والتراكيب');
     }
 
-    // 4. قسم أسرار الامتحان بالكامل (Exam Secrets & Curriculum)
+    // 4. قسم أسرار وتلميحات الامتحان (Exam Secrets & Curriculum)
     const examParts = [];
     if (item.curriculumImportance) examParts.push(`الأهمية المنهجية: ${item.curriculumImportance}.`);
     if (item.examNote) examParts.push(item.examNote);
+
     if (examParts.length > 0) {
-      addSectionChunks(examParts.join(' '), 'exam', 'أسرار الامتحان');
+      let rawExam = examParts.join(' ');
+      let egyptianExam = convertToEgyptianTeacherStyle(rawExam, 'exam', rawName);
+      let fullExamText = `خدوا بالكم كويس جداً، دي نقطة امتحان مهمة: ${egyptianExam}`.trim();
+      addSectionChunks(fullExamText, 'exam', 'أسرار الامتحان');
     }
 
     return segments;
