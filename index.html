@@ -187,26 +187,6 @@
       box-shadow: 0 0 16px rgba(244, 63, 94, 0.22);
     }
 
-    #btn-speak-card.is-speaking {
-      background: rgba(14, 165, 233, 0.3);
-      border-color: #38bdf8;
-      color: #e0f2fe;
-      box-shadow: 0 0 16px rgba(56, 189, 248, 0.3);
-    }
-
-    /* موجات الصوت التفاعلية بالمشغل */
-    @keyframes audioWavePulse {
-      0%, 100% { height: 4px; opacity: 0.45; }
-      50% { height: 14px; opacity: 1; }
-    }
-    .audio-wave-bar.wave-anim {
-      animation: audioWavePulse 0.85s ease-in-out infinite;
-    }
-    .audio-wave-bar:nth-child(2).wave-anim { animation-delay: 0.18s; }
-    .audio-wave-bar:nth-child(3).wave-anim { animation-delay: 0.36s; }
-    .audio-wave-bar:nth-child(4).wave-anim { animation-delay: 0.54s; }
-
-
 
     /* تبويبات بطاقة التشريح */
     .card-tab-btn {
@@ -241,17 +221,6 @@
       box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
     }
 
-    /* مزامنة تمييز الجمل الجاري قراءتها (Karaoke Transcript) */
-    .transcript-sentence {
-      transition: background-color 0.24s ease, color 0.24s ease;
-      border-radius: 4px;
-    }
-    .transcript-sentence.active-sentence {
-      background-color: rgba(14, 165, 233, 0.28) !important;
-      color: #ffffff !important;
-      text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
-      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.5);
-    }
 
     /* تخصيص شريط التمرير والمدى */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -530,7 +499,7 @@
           <div class="mt-2.5 flex items-center justify-between text-[10px] text-slate-400">
             <div class="flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span class="text-emerald-300 font-medium">موسوعة علمية مدققة + نطق صوتي</span>
+              <span class="text-emerald-300 font-medium">موسوعة علمية مدققة وشرح تفصيلي</span>
             </div>
             <span class="text-emerald-300 font-semibold">فتح الموسوعة ←</span>
           </div>
@@ -759,7 +728,7 @@
     <!-- =================================================================== -->
     <!-- و. بطاقة المعلومات التشريحية المطورة (Anatomical Info Card #5)      -->
     <!-- =================================================================== -->
-    <div id="item-info-card" class="hidden absolute bottom-2 md:bottom-3 right-2 left-2 sm:left-auto sm:w-[320px] md:right-4 md:w-[330px] max-h-[34dvh] md:max-h-[46dvh] med-glass-strong rounded-xl z-20 flex flex-col overflow-hidden transition-all duration-300">
+    <div id="item-info-card" class="hidden absolute bottom-2 md:bottom-3 right-2 left-2 sm:left-auto sm:w-[320px] md:right-4 md:w-[330px] max-h-[38dvh] md:max-h-[50dvh] med-glass-strong rounded-xl z-20 flex flex-col overflow-hidden transition-all duration-300">
       <!-- شريط عنوان البطاقة مع أزرار التنقل والتصغير على الموبايل -->
       <div class="px-2.5 py-1.5 sm:px-3 sm:py-2 border-b border-slate-800/90 bg-slate-950/55 shrink-0 space-y-1">
         <div class="flex items-center justify-between gap-1.5">
@@ -805,209 +774,6 @@
 
       <!-- جسم البطاقة المقسم بصرياً (المعلومات العلمية vs التلميحات الامتحانية) -->
       <div id="card-collapsible-body" class="overflow-y-auto px-2.5 py-2 sm:px-3 sm:py-2 space-y-1.5">
-        <!-- المشغل الصوتي العصري المتطور (Neural Biology Audio Player) -->
-        <div id="neural-audio-player-container" class="rounded-xl bg-slate-900/90 border border-sky-500/30 p-2 space-y-1.5 shadow-md">
-          <!-- شريط التحكم الأساسي السريع -->
-          <div class="flex items-center justify-between gap-1.5">
-            <!-- زر التشغيل / الإيقاف المؤقت الرئيسي -->
-            <button
-              type="button"
-              id="btn-speak-card"
-              onclick="window.BioNeuralPlayer && window.BioNeuralPlayer.togglePlay()"
-              class="flex-1 py-1.5 px-2 rounded-lg bg-gradient-to-r from-sky-500/20 to-cyan-500/15 hover:from-sky-500/30 hover:to-cyan-500/25 border border-sky-400/40 text-sky-100 text-[11px] font-bold flex items-center justify-between gap-1.5 transition-all"
-              data-tip="تشغيل / إيقاف الشرح الصوتي البشري"
-              aria-label="تشغيل الشرح الصوتي"
-            >
-              <div class="flex items-center gap-1.5 min-w-0">
-                <!-- أيقونة التشغيل العادية -->
-                <svg id="icon-speaker-idle" class="w-3.5 h-3.5 text-sky-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <!-- أيقونة الإيقاف المؤقت -->
-                <svg id="icon-speaker-playing" class="hidden w-3.5 h-3.5 text-cyan-300 animate-pulse shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span id="speech-status-text" class="truncate">استماع للشرح الطبيعي</span>
-              </div>
-
-              <!-- مؤشر موجات الصوت التفاعلية -->
-              <div class="flex items-center gap-0.5 shrink-0 px-1 py-0.5 bg-slate-950/70 rounded">
-                <span class="audio-wave-bar h-2 w-0.5 bg-sky-400 rounded-full"></span>
-                <span class="audio-wave-bar h-3.5 w-0.5 bg-cyan-300 rounded-full"></span>
-                <span class="audio-wave-bar h-1.5 w-0.5 bg-sky-400 rounded-full"></span>
-                <span class="audio-wave-bar h-3 w-0.5 bg-cyan-300 rounded-full"></span>
-              </div>
-            </button>
-
-            <!-- زر إيقاف نهائي (Stop) - مطور بحجم أكبر لمساحة لمس مثالية -->
-            <button
-              type="button"
-              id="btn-audio-stop"
-              onclick="window.BioNeuralPlayer && window.BioNeuralPlayer.stop()"
-              data-tip="إيقاف نهائي وإنهاء القراءة"
-              class="w-12 h-12 rounded-2xl viewer-ctrl-btn flex items-center justify-center text-xs shrink-0 hover:text-rose-400 hover:border-rose-500/40 transition-all text-rose-300 bg-rose-500/15 border border-rose-500/30 shadow-lg shadow-rose-950/20"
-              aria-label="إيقاف نهائي"
-            >
-              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                <rect x="6" y="6" width="12" height="12" rx="2" />
-              </svg>
-            </button>
-
-            <!-- متحكم سرعة الصوت الصغير والأنيق (Speed Controller) -->
-            <div id="audio-speed-container" class="relative shrink-0">
-              <button
-                type="button"
-                id="btn-audio-speed"
-                onclick="window.BioNeuralPlayer && window.BioNeuralPlayer.toggleSpeedMenu(event)"
-                data-tip="تغيير سرعة الشرح الصوتي"
-                aria-label="تغيير سرعة الشرح الصوتي"
-                aria-expanded="false"
-                class="min-w-[40px] h-8 px-2 rounded-xl viewer-ctrl-btn flex items-center justify-center gap-1 text-[11px] font-mono font-bold text-sky-200 hover:text-sky-100 hover:border-sky-400/50 bg-slate-900/80 border border-slate-700/80 shadow-sm transition-all"
-              >
-                <span id="speed-current-val">1x</span>
-                <svg class="w-2.5 h-2.5 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              <!-- قائمة اختيار السرعات بتصميم Glassmorphism أنيق منسدلة إلى الأسفل -->
-              <div
-                id="audio-speed-menu"
-                class="hidden absolute top-full left-0 mt-1.5 w-38 med-glass-strong rounded-xl p-1.5 shadow-2xl z-50 border border-sky-500/30 space-y-0.5 text-right font-sans transition-all duration-200 transform origin-top"
-              >
-                <div class="px-2 py-1 text-[10px] font-bold text-slate-400 border-b border-slate-800/80 flex items-center justify-between">
-                  <span>سرعة الشرح</span>
-                  <span class="font-mono text-sky-400 text-[9px]">Speed</span>
-                </div>
-                <div class="space-y-0.5 pt-0.5">
-                  <button
-                    type="button"
-                    data-audio-speed="0.75"
-                    onclick="window.BioNeuralPlayer && window.BioNeuralPlayer.setSpeed(0.75)"
-                    class="w-full px-2 py-1.5 rounded-lg text-[11px] font-semibold flex items-center justify-between hover:bg-slate-800/80 transition-all text-slate-200 group"
-                  >
-                    <span class="flex items-center gap-1.5">
-                      <span class="speed-check-icon w-3 h-3 text-sky-400 opacity-0 transition-opacity">✓</span>
-                      <span class="font-mono text-sky-300 font-bold">0.75x</span>
-                    </span>
-                    <span class="text-[10px] text-slate-400">بطيء</span>
-                  </button>
-                  <button
-                    type="button"
-                    data-audio-speed="0.9"
-                    onclick="window.BioNeuralPlayer && window.BioNeuralPlayer.setSpeed(0.9)"
-                    class="w-full px-2 py-1.5 rounded-lg text-[11px] font-semibold flex items-center justify-between hover:bg-slate-800/80 transition-all text-slate-200 group"
-                  >
-                    <span class="flex items-center gap-1.5">
-                      <span class="speed-check-icon w-3 h-3 text-sky-400 opacity-0 transition-opacity">✓</span>
-                      <span class="font-mono text-sky-300 font-bold">0.9x</span>
-                    </span>
-                    <span class="text-[10px] text-slate-400">أبطأ قليلًا</span>
-                  </button>
-                  <button
-                    type="button"
-                    data-audio-speed="1.0"
-                    onclick="window.BioNeuralPlayer && window.BioNeuralPlayer.setSpeed(1.0)"
-                    class="w-full px-2 py-1.5 rounded-lg text-[11px] font-semibold flex items-center justify-between hover:bg-slate-800/80 transition-all text-slate-200 group"
-                  >
-                    <span class="flex items-center gap-1.5">
-                      <span class="speed-check-icon w-3 h-3 text-sky-400 opacity-0 transition-opacity">✓</span>
-                      <span class="font-mono text-sky-300 font-bold">1x</span>
-                    </span>
-                    <span class="text-[10px] text-slate-400">السرعة الطبيعية</span>
-                  </button>
-                  <button
-                    type="button"
-                    data-audio-speed="1.25"
-                    onclick="window.BioNeuralPlayer && window.BioNeuralPlayer.setSpeed(1.25)"
-                    class="w-full px-2 py-1.5 rounded-lg text-[11px] font-semibold flex items-center justify-between hover:bg-slate-800/80 transition-all text-slate-200 group"
-                  >
-                    <span class="flex items-center gap-1.5">
-                      <span class="speed-check-icon w-3 h-3 text-sky-400 opacity-0 transition-opacity">✓</span>
-                      <span class="font-mono text-sky-300 font-bold">1.25x</span>
-                    </span>
-                    <span class="text-[10px] text-slate-400">أسرع قليلًا</span>
-                  </button>
-                  <button
-                    type="button"
-                    data-audio-speed="1.5"
-                    onclick="window.BioNeuralPlayer && window.BioNeuralPlayer.setSpeed(1.5)"
-                    class="w-full px-2 py-1.5 rounded-lg text-[11px] font-semibold flex items-center justify-between hover:bg-slate-800/80 transition-all text-slate-200 group"
-                  >
-                    <span class="flex items-center gap-1.5">
-                      <span class="speed-check-icon w-3 h-3 text-sky-400 opacity-0 transition-opacity">✓</span>
-                      <span class="font-mono text-sky-300 font-bold">1.5x</span>
-                    </span>
-                    <span class="text-[10px] text-slate-400">سريع</span>
-                  </button>
-                  <button
-                    type="button"
-                    data-audio-speed="1.75"
-                    onclick="window.BioNeuralPlayer && window.BioNeuralPlayer.setSpeed(1.75)"
-                    class="w-full px-2 py-1.5 rounded-lg text-[11px] font-semibold flex items-center justify-between hover:bg-slate-800/80 transition-all text-slate-200 group"
-                  >
-                    <span class="flex items-center gap-1.5">
-                      <span class="speed-check-icon w-3 h-3 text-sky-400 opacity-0 transition-opacity">✓</span>
-                      <span class="font-mono text-sky-300 font-bold">1.75x</span>
-                    </span>
-                    <span class="text-[10px] text-slate-400">سريع جدًا</span>
-                  </button>
-                  <button
-                    type="button"
-                    data-audio-speed="2.0"
-                    onclick="window.BioNeuralPlayer && window.BioNeuralPlayer.setSpeed(2.0)"
-                    class="w-full px-2 py-1.5 rounded-lg text-[11px] font-semibold flex items-center justify-between hover:bg-slate-800/80 transition-all text-slate-200 group"
-                  >
-                    <span class="flex items-center gap-1.5">
-                      <span class="speed-check-icon w-3 h-3 text-sky-400 opacity-0 transition-opacity">✓</span>
-                      <span class="font-mono text-sky-300 font-bold">2x</span>
-                    </span>
-                    <span class="text-[10px] text-slate-400">ضعف السرعة</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              id="btn-audio-replay"
-              onclick="window.BioNeuralPlayer && window.BioNeuralPlayer.replayCurrentSegment()"
-              data-tip="إعادة سماع الجملة الحالية"
-              class="w-7 h-7 rounded-lg viewer-ctrl-btn flex items-center justify-center text-[11px] shrink-0"
-              aria-label="إعادة الجملة"
-            >
-              <svg class="w-3.5 h-3.5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-          </div>
-
-          <!-- شريط حالة الجملة الحالية والتقنية -->
-          <div class="flex items-center justify-between text-[10px] px-1 text-slate-300">
-            <div class="flex items-center gap-1.5 min-w-0">
-              <span id="audio-engine-badge" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 shrink-0">Neural TTS</span>
-              <span id="audio-current-label" class="text-slate-400 truncate text-[10px]">التعريف المنهجي</span>
-            </div>
-            <span id="audio-progress-counter" class="font-mono text-[10px] font-bold text-sky-300 tabular-nums shrink-0">1 / 3</span>
-          </div>
-
-          <!-- شريط تقدم التسجيل الصوتي والزمن التفاعلي -->
-          <div class="space-y-0.5 px-0.5">
-            <div
-              class="relative h-1.5 w-full bg-slate-950 rounded-full overflow-hidden cursor-pointer group border border-slate-800"
-              onclick="if(window.BioNeuralPlayer){ const rect=this.getBoundingClientRect(); const pct=((event.clientX-rect.left)/rect.width)*100; window.BioNeuralPlayer.seek(pct); }"
-              data-tip="شريط تقديم/تأخير الصوت"
-            >
-              <div id="audio-progress-fill" class="h-full bg-gradient-to-l from-sky-400 to-cyan-300 transition-all duration-100" style="width: 0%"></div>
-            </div>
-            <div class="flex items-center justify-between text-[9px] font-mono text-slate-400 tabular-nums">
-              <span id="audio-time-current">0:00</span>
-              <span id="audio-time-total">0:00</span>
-            </div>
-          </div>
-        </div>
-
         <!-- شريط تبويبات تفاصيل التشريح العلمي والامتحاني -->
         <div class="flex items-center gap-1 p-0.5 rounded-lg bg-slate-950/80 border border-slate-800 text-[10px] font-bold">
           <button type="button" onclick="setCardTab('overview')" id="tab-btn-overview" class="card-tab-btn is-active flex-1 py-1 rounded-md text-center transition-all">البيان والوظيفة</button>
@@ -1296,21 +1062,6 @@
         </div>
         
         <div class="flex items-center gap-2">
-          <!-- زر إيقاف الصوت الجديد المطور في الهيكل -->
-          <button 
-            type="button" 
-            id="btn-audio-stop-encyclopedia"
-            onclick="if(window.BioNeuralPlayer) window.BioNeuralPlayer.stop()" 
-            class="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-rose-950/40 transition-all hover:scale-105 active:scale-95"
-            aria-label="إيقاف الصوت فوراً"
-          >
-            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 24 24">
-              <rect x="6" y="6" width="12" height="12" rx="1.5" />
-            </svg>
-            <span class="hidden sm:inline">إيقاف الصوت فوراً</span>
-            <span class="sm:hidden">إيقاف</span>
-          </button>
-
           <button type="button" onclick="closeSystemsEncyclopedia()" class="w-10 h-10 rounded-xl viewer-ctrl-btn flex items-center justify-center text-slate-300 hover:text-white" aria-label="إغلاق الموسوعة">✕</button>
         </div>
       </div>
@@ -1348,22 +1099,16 @@
     </div>
   </div>
 
-  <!-- إشعار صوتي منبثق للمشغل (Audio Toast) -->
-  <div id="audio-toast" class="hidden fixed bottom-16 left-1/2 -translate-x-1/2 z-50 px-3.5 py-1.5 rounded-xl med-glass-strong text-xs font-bold transition-all shadow-xl pointer-events-none"></div>
-
   <!-- تلميح عائم ذكي للعناصر والأزرار (Hover & Mobile Long-Press Tooltip) -->
   <div id="hover-tooltip" class="hidden fixed pointer-events-none z-50 px-3.5 py-1.5 rounded-lg med-glass-strong text-[11px] font-semibold text-sky-100 shadow-xl max-w-[240px]"></div>
 
 
 
-  <!-- ربط الوحدات البرمجية المنظمة (البيانات العلمية + موسوعة الأجهزة + سجل التشريح الموحد + استوديو العظام + قاموس النطق + مشغل الصوت العصري + محرك الأطلس 3D) -->
+  <!-- ربط الوحدات البرمجية المنظمة (البيانات العلمية + موسوعة الأجهزة + سجل التشريح الموحد + استوديو العظام + محرك الأطلس 3D) -->
   <script src="/js/curriculum-data.js"></script>
   <script src="/js/encyclopedic-systems.js"></script>
   <script src="/js/anatomical-registry.js"></script>
   <script src="/js/bone-studio.js"></script>
-  <script src="/js/audio-dictionary.js"></script>
-  <script src="/js/human-audio-engine.js"></script>
-  <script src="/js/neural-audio-player.js"></script>
   <script src="/js/atlas-engine.js"></script>
 </body>
 </html>

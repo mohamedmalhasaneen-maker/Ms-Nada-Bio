@@ -1533,7 +1533,7 @@
   }
   window.selectAdjacentCurriculumItem = selectAdjacentCurriculumItem;
 
-  // --- 9. مطابقة المجسمات بدقة، العزل، بطاقة المعلومات، والنطق الصوتي ---
+  // --- 9. مطابقة المجسمات بدقة، العزل، وبطاقة المعلومات ---
   function getItemMeshes(item) {
     if (!item) return [];
     if (item.exactMeshes && item.exactMeshes.length > 0) {
@@ -1724,11 +1724,6 @@
 
       setInteractionStatus(`محدد حالياً: ${item.name}`, "active");
 
-      // تجهيز الشرح الصوتي في المشغل العصري وتفعيل التشغيل التلقائي فوراً
-      if (window.BioNeuralPlayer) {
-        window.BioNeuralPlayer.loadItem(item, resolvedSectionName, resolvedSystemName, true);
-      }
-
       // تمييز العنصر في الفهرس
       document.querySelectorAll(".index-item-card").forEach((el) => el.classList.remove("is-selected"));
       const activeTreeEl = document.getElementById(`tree-item-${item.id}`);
@@ -1764,26 +1759,8 @@
   }
   window.toggleMobileCardSheet = toggleMobileCardSheet;
 
-  // --- دوال الربط بمشغل الصوت العصري المتطور (Neural Biology Player) ---
-  function toggleCardSpeech() {
-    if (window.BioNeuralPlayer) {
-      window.BioNeuralPlayer.togglePlay();
-    }
-  }
-  window.toggleCardSpeech = toggleCardSpeech;
-
-  function toggleAutoSpeech() {
-    if (window.BioNeuralPlayer) {
-      window.BioNeuralPlayer.toggleAutoSpeech();
-    }
-  }
-  window.toggleAutoSpeech = toggleAutoSpeech;
-
   // --- العزل وإعادة الضبط وتركيز الكاميرا ---
   function resetSceneAndIsolation(resetCameraFlag = true) {
-    if (window.BioNeuralPlayer) {
-      window.BioNeuralPlayer.stop();
-    }
     resetAllMaterials();
     currentSelectedItem = null;
     currentSelectedMeta = { sectionName: "", systemName: "" };
@@ -1828,9 +1805,6 @@
   window.resetSceneAndIsolation = resetSceneAndIsolation;
 
   function closeInfoCard() {
-    if (window.BioNeuralPlayer) {
-      window.BioNeuralPlayer.stop();
-    }
     const itemInfoCard = document.getElementById("item-info-card");
     if (itemInfoCard) itemInfoCard.classList.add("hidden");
     resetAllMaterials();
@@ -2502,12 +2476,6 @@
                 <h5 class="text-xs sm:text-sm font-extrabold text-white">${organ.name}</h5>
                 <span class="text-[11px] font-mono text-emerald-300">${organ.englishName}</span>
               </div>
-              <button type="button" onclick="speakEncyclopediaOrgan('${organ.id}')" data-tip="استماع للشرح الصوتي الطبيعي" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 text-[11px] font-bold flex items-center gap-1 shrink-0 transition-all">
-                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072M11 5L6 9H2v6h4l5 4V5z" />
-                </svg>
-                <span>استماع</span>
-              </button>
             </div>
 
             <div class="text-[11px] space-y-1.5 text-slate-300">
@@ -2531,28 +2499,6 @@
     content.innerHTML = html;
   }
   window.showEncyclopediaSystem = showEncyclopediaSystem;
-
-  function speakEncyclopediaOrgan(organId) {
-    if (!window.BioNeuralPlayer || !window.SYSTEMS_ENCYCLOPEDIA) return;
-    for (const sysKey in window.SYSTEMS_ENCYCLOPEDIA) {
-      const sys = window.SYSTEMS_ENCYCLOPEDIA[sysKey];
-      const found = sys.organs.find(o => o.id === organId);
-      if (found) {
-        const audioItem = {
-          id: found.id,
-          name: `${found.name} (${found.englishName})`,
-          system: sysKey,
-          count: 1,
-          functionDesc: `${found.classification}. الموقع: ${found.location}. الوظيفة: ${found.primaryFunction}. المعالم: ${found.landmarks}`,
-          examNote: found.examNote
-        };
-        window.BioNeuralPlayer.loadItem(audioItem, sys.name, "موسوعة الأجهزة الحيوية", true);
-        showAudioToast(`جاري تشغيل الشرح: ${found.name}`, "info");
-        break;
-      }
-    }
-  }
-  window.speakEncyclopediaOrgan = speakEncyclopediaOrgan;
 
   window.allMeshesBySystem = allMeshesBySystem;
 

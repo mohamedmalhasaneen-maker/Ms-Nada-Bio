@@ -116,7 +116,7 @@ export const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose }) => {
               <span>ميزات تعليمية متقدمة</span>
             </h4>
             <p className="text-slate-300 leading-relaxed">
-              • انقر على أي جزء في النموذج لعرض بطاقة المعلومات الطبية الكاملة مع <strong className="text-teal-300">النطق الصوتي التلقائي (TTS)</strong> لشرح وظائف الأعضاء، وإمكانية الاستماع للأسماء باللغتين العربية واللاتينية.<br/>
+              • انقر على أي جزء في النموذج لعرض <strong className="text-teal-300">بطاقة المعلومات الطبية الكاملة</strong> لشرح وظائف الأعضاء وتفاصيلها التشريحية والسريرية باللغتين العربية واللاتينية.<br/>
               • استخدم زر <strong className="text-teal-300">أشعة X</strong> لرؤية الأعضاء الداخلية الشفافة وتداخل العظام والأعصاب.<br/>
               • اختبر تحصيلك العلمي عبر زر <strong className="text-emerald-300">اختبار المعرفة</strong> لمطابقة الأسئلة مع التركيب ثلاثي الأبعاد.
             </p>
