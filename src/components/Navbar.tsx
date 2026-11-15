@@ -7,7 +7,9 @@ import {
   Maximize,
   RotateCcw,
   Sparkles,
+  DownloadCloud,
 } from 'lucide-react';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface NavbarProps {
   currentSystem: BodySystem;
@@ -15,12 +17,14 @@ interface NavbarProps {
   onOpenQuiz?: () => void;
   onOpenGuide?: () => void;
   onResetView: () => void;
+  onOpenOfflineManager: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentSystem,
   onSelectSystem,
   onResetView,
+  onOpenOfflineManager,
 }) => {
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -87,7 +91,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Primary Navigation Tabs: The 3 Systems requested */}
-        <nav className="flex items-center gap-1 p-0.5 sm:p-1 rounded-xl bg-slate-900/90 border border-slate-800 shadow-inner overflow-x-auto max-w-[55vw] sm:max-w-full scrollbar-none">
+        <nav className="flex items-center gap-1 p-0.5 sm:p-1 rounded-xl bg-slate-900/90 border border-slate-800 shadow-inner overflow-x-auto max-w-[45vw] sm:max-w-full scrollbar-none">
           {systems.map((sys) => {
             const Icon = sys.icon;
             const isActive = currentSystem === sys.id;
@@ -110,8 +114,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           })}
         </nav>
 
-        {/* Action Controls: Reset, Fullscreen */}
-        <div className="flex items-center gap-1 shrink-0">
+        {/* Action Controls: Offline Manager, Install, Reset, Fullscreen */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={onOpenOfflineManager}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-teal-500/40 bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 text-xs font-bold transition-all shrink-0"
+            title="تجهيز الموقع للعمل دون إنترنت"
+          >
+            <DownloadCloud className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline">وضع عدم الاتصال</span>
+          </button>
+
+          <PWAInstallButton />
+
           <button
             id="btn-reset-view"
             onClick={onResetView}

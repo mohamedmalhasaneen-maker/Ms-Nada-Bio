@@ -7,6 +7,8 @@ import { InfoCard } from './components/InfoCard';
 import { ControlOverlay } from './components/ControlOverlay';
 import { PartsSidebar } from './components/PartsSidebar';
 import { GuideModal } from './components/GuideModal';
+import { OfflineIndicator } from './components/OfflineIndicator';
+import { OfflineManagerModal } from './components/OfflineManagerModal';
 import { ANATOMICAL_ITEMS } from './data/anatomyData';
 import {
   Bone,
@@ -31,6 +33,7 @@ export default function App() {
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
+  const [isOfflineManagerOpen, setIsOfflineManagerOpen] = useState<boolean>(false);
 
   // Switch biological system
   const handleSelectSystem = useCallback((system: BodySystem) => {
@@ -212,6 +215,7 @@ export default function App() {
         onSelectSystem={handleSelectSystem}
         onOpenGuide={() => setIsGuideOpen(true)}
         onResetView={handleResetView}
+        onOpenOfflineManager={() => setIsOfflineManagerOpen(true)}
       />
 
       {/* 2. Main 3D Stage & Interactive UI Overlay */}
@@ -417,6 +421,15 @@ export default function App() {
       <GuideModal
         isOpen={isGuideOpen}
         onClose={() => setIsGuideOpen(false)}
+      />
+
+      {/* Offline Status Indicator */}
+      <OfflineIndicator />
+
+      {/* Offline Preparation Manager Modal */}
+      <OfflineManagerModal
+        isOpen={isOfflineManagerOpen}
+        onClose={() => setIsOfflineManagerOpen(false)}
       />
     </div>
   );
