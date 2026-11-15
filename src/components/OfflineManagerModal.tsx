@@ -24,6 +24,11 @@ const CRITICAL_ASSETS = [
   '/models/nervous_system.glb',
   '/models/brain.glb',
   '/models/organs.glb',
+  'https://cdn.tailwindcss.com',
+  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+  'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js',
+  'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js'
 ];
 
 export const OfflineManagerModal: React.FC<OfflineManagerModalProps> = ({ isOpen, onClose }) => {
@@ -47,7 +52,7 @@ export const OfflineManagerModal: React.FC<OfflineManagerModalProps> = ({ isOpen
         throw new Error('متصفحك لا يدعم نظام التخزين المؤقت (Cache Storage).');
       }
 
-      const cache = await caches.open('bioatlas-offline-v2');
+      const cache = await caches.open('bio-atlas-offline-v3');
       let successCount = 0;
       const total = CRITICAL_ASSETS.length;
 
@@ -55,8 +60,8 @@ export const OfflineManagerModal: React.FC<OfflineManagerModalProps> = ({ isOpen
         const url = CRITICAL_ASSETS[i];
         try {
           setStatusMessage(`جاري تنزيل وتخزين: ${url}`);
-          const response = await fetch(url, { cache: 'reload' });
-          if (response.ok) {
+          const response = await fetch(url, { mode: 'no-cors', cache: 'reload' });
+          if (response) {
             await cache.put(url, response.clone());
             successCount++;
             setDownloadedCount(successCount);
