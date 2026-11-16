@@ -3,6 +3,8 @@
   "name": "أطلس الأحياء التفاعلي 3D",
   "short_name": "أطلس الأحياء",
   "description": "أطلس تشريحي 3D تفاعلي متكامل لمادة الأحياء للثانوية العامة • مس/ ندى بدوي",
+  "lang": "ar",
+  "dir": "rtl",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -10,10 +12,22 @@
   "theme_color": "#040914",
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/pwa-192x192.png?v=2",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png?v=2",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png?v=2",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

@@ -9,8 +9,16 @@ interface OfflineManagerModalProps {
 const CRITICAL_ASSETS = [
   '/',
   '/index.html',
+  '/manifest.webmanifest',
   '/manifest.json',
-  '/icon.svg',
+  '/favicon.ico?v=2',
+  '/favicon-16x16.png?v=2',
+  '/favicon-32x32.png?v=2',
+  '/apple-touch-icon.png?v=2',
+  '/pwa-192x192.png?v=2',
+  '/pwa-512x512.png?v=2',
+  '/pwa-maskable-512x512.png?v=2',
+  '/logo-atlas.png?v=2',
   '/js/curriculum-data.js',
   '/js/encyclopedic-systems.js',
   '/js/anatomical-registry.js',
@@ -52,7 +60,7 @@ export const OfflineManagerModal: React.FC<OfflineManagerModalProps> = ({ isOpen
         throw new Error('متصفحك لا يدعم نظام التخزين المؤقت (Cache Storage).');
       }
 
-      const cache = await caches.open('bio-atlas-offline-v3');
+      const cache = await caches.open('bio-atlas-offline-v4');
       let successCount = 0;
       const total = CRITICAL_ASSETS.length;
 

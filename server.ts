@@ -16,9 +16,21 @@ async function startServer() {
   if (process.env.NODE_ENV === 'production') {
     const distPath = path.resolve(__dirname, 'dist');
     if (fs.existsSync(distPath)) {
-      app.use(express.static(distPath));
-      app.get('*', (_req, res) => {
-        res.sendFile(path.resolve(distPath, 'index.html'));
+      const indexHtmlPath = path.resolve(distPath, 'index.html');
+      app.use(express.static(distPath, { index: false }));
+      app.get('*', (req, res) => {
+        if (fs.existsSync(indexHtmlPath)) {
+          const proto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0] || req.protocol || 'https';
+          const host = (req.headers['x-forwarded-host'] as string)?.split(',')[0] || req.get('host');
+          const origin = (process.env.APP_URL || (host ? `${proto}://${host}` : '')).replace(/\/$/, '');
+          let html = fs.readFileSync(indexHtmlPath, 'utf-8');
+          if (origin) {
+            html = html.replace(/content="\/logo-atlas\.png\?v=2"/g, `content="${origin}/logo-atlas.png?v=2"`);
+          }
+          res.type('html').send(html);
+          return;
+        }
+        res.status(404).send('Not found');
       });
     }
   } else {

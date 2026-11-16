@@ -1,9 +1,17 @@
-const CACHE_NAME = 'bio-atlas-offline-v3';
+const CACHE_NAME = 'bio-atlas-offline-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
+  '/manifest.webmanifest',
   '/manifest.json',
-  '/icon.svg',
+  '/favicon.ico?v=2',
+  '/favicon-16x16.png?v=2',
+  '/favicon-32x32.png?v=2',
+  '/apple-touch-icon.png?v=2',
+  '/pwa-192x192.png?v=2',
+  '/pwa-512x512.png?v=2',
+  '/pwa-maskable-512x512.png?v=2',
+  '/logo-atlas.png?v=2',
   '/js/curriculum-data.js',
   '/js/encyclopedic-systems.js',
   '/js/anatomical-registry.js',
@@ -70,6 +78,7 @@ self.addEventListener('fetch', (event) => {
     url.pathname.endsWith('.css') ||
     url.pathname.endsWith('.svg') ||
     url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.ico') ||
     url.hostname.includes('cdnjs.cloudflare.com') ||
     url.hostname.includes('cdn.jsdelivr.net') ||
     url.hostname.includes('cdn.tailwindcss.com') ||
