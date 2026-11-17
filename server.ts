@@ -34,9 +34,20 @@ async function startServer() {
       });
     }
   } else {
+    app.get(['/', '/index.html'], (req, res) => {
+      const indexHtmlPath = path.resolve(__dirname, 'index.html');
+      const proto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0] || req.protocol || 'https';
+      const host = (req.headers['x-forwarded-host'] as string)?.split(',')[0] || req.get('host');
+      const origin = (process.env.APP_URL || (host ? `${proto}://${host}` : '')).replace(/\/$/, '');
+      let html = fs.readFileSync(indexHtmlPath, 'utf-8');
+      if (origin) {
+        html = html.replace(/content="\/logo-atlas\.png\?v=2"/g, `content="${origin}/logo-atlas.png?v=2"`);
+      }
+      res.type('html').send(html);
+    });
     const { createServer } = await import('vite');
     const vite = await createServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: false, ws: false },
       appType: 'spa',
     });
     app.use(vite.middlewares);
